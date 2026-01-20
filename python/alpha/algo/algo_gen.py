@@ -60,6 +60,27 @@ def COUNT(
     _algo.count(r, input, periods)
     return r
 
+def CROSS(
+  a: np.ndarray | list[np.ndarray], b: np.ndarray | list[np.ndarray]
+) -> np.ndarray | list[np.ndarray]:
+  """
+  CROSS(A, B): Previous A < B, Current A >= B
+  
+  Ref: https://www.amibroker.com/guide/afl/cross.html
+  """
+  if isinstance(a, list) and isinstance(b, list):
+    r = [np.empty_like(x, dtype=bool) for x in a]
+    a = [x.astype(float) for x in a]
+    b = [x.astype(float) for x in b]
+    _algo.cross(r, a, b)
+    return r
+  else:
+    r = np.empty_like(a, dtype=bool)
+    a = a.astype(float)
+    b = b.astype(float)
+    _algo.cross(r, a, b)
+    return r
+
 def DMA(
   input: np.ndarray | list[np.ndarray], alpha: float
 ) -> np.ndarray | list[np.ndarray]:
@@ -147,6 +168,25 @@ def LLVBARS(
     _algo.llvbars(r, input, periods)
     return r
 
+def LONGCROSS(
+  a: np.ndarray | list[np.ndarray], b: np.ndarray | list[np.ndarray], n: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  LONGCROSS(A,B,N): Previous N A < B, Current A >= B
+  """
+  if isinstance(a, list) and isinstance(b, list):
+    r = [np.empty_like(x, dtype=bool) for x in a]
+    a = [x.astype(float) for x in a]
+    b = [x.astype(float) for x in b]
+    _algo.longcross(r, a, b, n)
+    return r
+  else:
+    r = np.empty_like(a, dtype=bool)
+    a = a.astype(float)
+    b = b.astype(float)
+    _algo.longcross(r, a, b, n)
+    return r
+
 def MA(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
@@ -163,6 +203,25 @@ def MA(
   else:
     r = np.empty_like(input)
     _algo.ma(r, input, periods)
+    return r
+
+def RCROSS(
+  a: np.ndarray | list[np.ndarray], b: np.ndarray | list[np.ndarray]
+) -> np.ndarray | list[np.ndarray]:
+  """
+  RCROSE(A, B): Previous A > B, Current A <= B
+  """
+  if isinstance(a, list) and isinstance(b, list):
+    r = [np.empty_like(x, dtype=bool) for x in a]
+    a = [x.astype(float) for x in a]
+    b = [x.astype(float) for x in b]
+    _algo.rcross(r, a, b)
+    return r
+  else:
+    r = np.empty_like(a, dtype=bool)
+    a = a.astype(float)
+    b = b.astype(float)
+    _algo.rcross(r, a, b)
     return r
 
 def REF(
@@ -182,6 +241,25 @@ def REF(
     _algo.ref(r, input, periods)
     return r
 
+def RLONGCROSS(
+  a: np.ndarray | list[np.ndarray], b: np.ndarray | list[np.ndarray], n: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  RLONGCROSS(A,B,N): Previous N A > B, Current A <= B
+  """
+  if isinstance(a, list) and isinstance(b, list):
+    r = [np.empty_like(x, dtype=bool) for x in a]
+    a = [x.astype(float) for x in a]
+    b = [x.astype(float) for x in b]
+    _algo.rlongcross(r, a, b, n)
+    return r
+  else:
+    r = np.empty_like(a, dtype=bool)
+    a = a.astype(float)
+    b = b.astype(float)
+    _algo.rlongcross(r, a, b, n)
+    return r
+
 def SMA(
   input: np.ndarray | list[np.ndarray], n: int, m: int
 ) -> np.ndarray | list[np.ndarray]:
@@ -199,5 +277,43 @@ def SMA(
   else:
     r = np.empty_like(input)
     _algo.sma(r, input, n, m)
+    return r
+
+def SUM(
+  input: np.ndarray | list[np.ndarray], periods: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Sum of value N periods ago
+  
+  If periods is 0, it calculates the cumulative sum from the first valid value.
+  
+  Ref: https://www.amibroker.com/guide/afl/sum.html
+  """
+  if isinstance(input, list):
+    r = [np.empty_like(x) for x in input]
+    _algo.sum(r, input, periods)
+    return r
+  else:
+    r = np.empty_like(input)
+    _algo.sum(r, input, periods)
+    return r
+
+def SUMBARS(
+  input: np.ndarray | list[np.ndarray], amount: float
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Sums X backwards until the sum is greater than or equal to A
+  
+  Returns the number of periods (bars) passed.
+  
+  Ref: https://www.amibroker.com/guide/afl/sumbars.html
+  """
+  if isinstance(input, list):
+    r = [np.empty_like(x) for x in input]
+    _algo.sumbars(r, input, amount)
+    return r
+  else:
+    r = np.empty_like(input)
+    _algo.sumbars(r, input, amount)
     return r
 

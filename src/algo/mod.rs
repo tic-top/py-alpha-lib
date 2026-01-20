@@ -15,6 +15,10 @@ pub use extremum::*;
 pub use ma::*;
 use num_traits::Float;
 pub use series::*;
+mod sum;
+pub use sum::*;
+mod cross;
+pub use cross::*;
 
 #[inline]
 pub fn is_normal<T: Float>(a: &T) -> bool {
