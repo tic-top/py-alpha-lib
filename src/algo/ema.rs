@@ -82,11 +82,11 @@ pub fn ema_impl<NumT: Float + Send + Sync>(
         .enumerate()
         .skip(ctx.start(total))
       {
-        if ctx.skip_nan() && !is_normal(c) {
+        if ctx.is_skip_nan() && !is_normal(c) {
           *r = NumT::nan();
           continue;
         }
-        if ctx.strictly_cycle() && n < periods {
+        if ctx.is_strictly_cycle() && n < periods {
           *r = NumT::nan();
         } else {
           *r = alpha * *c + k * prev;

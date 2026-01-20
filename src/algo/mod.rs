@@ -1,7 +1,9 @@
 mod context;
 mod ema;
 mod error;
+mod extremum;
 mod ma;
+mod series;
 mod skip_nan_window;
 
 use std::fmt::{Debug, Display};
@@ -9,8 +11,10 @@ use std::fmt::{Debug, Display};
 pub use context::Context;
 pub use ema::*;
 pub use error::Error;
+pub use extremum::*;
 pub use ma::*;
 use num_traits::Float;
+pub use series::*;
 
 #[inline]
 pub fn is_normal<T: Float>(a: &T) -> bool {

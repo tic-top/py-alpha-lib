@@ -28,7 +28,7 @@ pub fn ta_ma<NumT: Float + Send + Sync>(
     .for_each(|(r, x)| {
       let start = ctx.start(r.len());
       r.fill(NumT::nan());
-      if ctx.skip_nan() {
+      if ctx.is_skip_nan() {
         let iter = SkipNanWindow::new(x, periods, start);
         let mut sum = NumT::zero();
         for i in iter {
@@ -49,7 +49,7 @@ pub fn ta_ma<NumT: Float + Send + Sync>(
             continue;
           }
 
-          if ctx.strictly_cycle() {
+          if ctx.is_strictly_cycle() {
             // strict cycle with skip_nan implies we want 'periods' valid numbers,
             // BUT existing behavior implies we return NaN if there are any NaNs in the window.
             if i.no_nan_count == periods && (i.end - i.start + 1) == periods {
@@ -97,7 +97,7 @@ pub fn ta_ma<NumT: Float + Send + Sync>(
             continue;
           }
 
-          if ctx.strictly_cycle() {
+          if ctx.is_strictly_cycle() {
             if i >= periods - 1 {
               if nan_in_window == 0 {
                 r[i] = sum / NumT::from(periods).unwrap();

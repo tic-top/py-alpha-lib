@@ -141,7 +141,7 @@ mod algo_impl {
     }
   }
 
-  include!(concat!(env!("OUT_DIR"), "/algo_bindings.py"));
+  include!(concat!(env!("OUT_DIR"), "/algo_bindings.rs"));
 }
 
 #[pymodule]

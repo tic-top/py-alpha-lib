@@ -54,11 +54,13 @@ impl Context {
     total / self.groups()
   }
 
-  pub fn skip_nan(&self) -> bool {
+  /// should skip nan when compute
+  pub fn is_skip_nan(&self) -> bool {
     self._flags & FLAG_SKIP_NAN != 0
   }
 
-  pub fn strictly_cycle(&self) -> bool {
+  /// strictly follow cycle required, fill nan for not enough data
+  pub fn is_strictly_cycle(&self) -> bool {
     self._flags & FLAG_STRICTLY_CYCLE != 0
   }
 }
