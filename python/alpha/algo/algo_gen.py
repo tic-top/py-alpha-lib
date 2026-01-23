@@ -7,7 +7,7 @@ def BARSLAST(
   input: np.ndarray | list[np.ndarray]
 ) -> np.ndarray | list[np.ndarray]:
   """
-  Bars since last condition true
+  Calculate number of bars since last condition true
   
   Ref: https://www.amibroker.com/guide/afl/barslast.html
   """
@@ -26,7 +26,7 @@ def BARSSINCE(
   input: np.ndarray | list[np.ndarray]
 ) -> np.ndarray | list[np.ndarray]:
   """
-  Bars since first condition true
+  Calculate number of bars since first condition true
   
   Ref: https://www.amibroker.com/guide/afl/barssince.html
   """
@@ -45,7 +45,7 @@ def COUNT(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
   """
-  Count periods where condition is true
+  Calculate number of periods where condition is true in passed `periods` window
   
   Ref: https://www.amibroker.com/guide/afl/count.html
   """
@@ -64,9 +64,8 @@ def CROSS(
   a: np.ndarray | list[np.ndarray], b: np.ndarray | list[np.ndarray]
 ) -> np.ndarray | list[np.ndarray]:
   """
-  CROSS(A, B): Previous A < B, Current A >= B
-  
-  Ref: https://www.amibroker.com/guide/afl/cross.html
+  For 2 arrays A and B, return true if A[i-1] < B[i-1] and A[i] >= B[i]
+  alias: golden_cross, cross_ge
   """
   if isinstance(a, list) and isinstance(b, list):
     r = [np.empty_like(x, dtype=bool) for x in a]
@@ -82,29 +81,28 @@ def CROSS(
     return r
 
 def DMA(
-  input: np.ndarray | list[np.ndarray], alpha: float
+  input: np.ndarray | list[np.ndarray], weight: float
 ) -> np.ndarray | list[np.ndarray]:
   """
   Exponential Moving Average
+  current = weight * current + (1 - weight) * previous
   
-  https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average
-  
-  current = alpha * current + (1 - alpha) * previous
+  Ref: https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average
   """
   if isinstance(input, list):
     r = [np.empty_like(x) for x in input]
-    _algo.dma(r, input, alpha)
+    _algo.dma(r, input, weight)
     return r
   else:
     r = np.empty_like(input)
-    _algo.dma(r, input, alpha)
+    _algo.dma(r, input, weight)
     return r
 
 def HHV(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
   """
-  Highest High Value
+  Find highest value in a preceding `periods` window
   
   Ref: https://www.amibroker.com/guide/afl/hhv.html
   """
@@ -121,7 +119,7 @@ def HHVBARS(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
   """
-  Bars since Highest High Value
+  The number of periods that have passed since the array reached its `periods` period high
   
   Ref: https://www.amibroker.com/guide/afl/hhvbars.html
   """
@@ -138,7 +136,7 @@ def LLV(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
   """
-  Lowest Low Value
+  Find lowest value in a preceding `periods` window
   
   Ref: https://www.amibroker.com/guide/afl/llv.html
   """
@@ -155,7 +153,7 @@ def LLVBARS(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
   """
-  Bars since Lowest Low Value
+  The number of periods that have passed since the array reached its periods period low
   
   Ref: https://www.amibroker.com/guide/afl/llvbars.html
   """
@@ -172,7 +170,7 @@ def LONGCROSS(
   a: np.ndarray | list[np.ndarray], b: np.ndarray | list[np.ndarray], n: int
 ) -> np.ndarray | list[np.ndarray]:
   """
-  LONGCROSS(A,B,N): Previous N A < B, Current A >= B
+  For 2 arrays A and B, return true if previous N periods A < B, Current A >= B
   """
   if isinstance(a, list) and isinstance(b, list):
     r = [np.empty_like(x, dtype=bool) for x in a]
@@ -191,10 +189,9 @@ def MA(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
   """
-  Moving Average
+  Simple Moving Average, also known as arithmetic moving average
   
-  https://en.wikipedia.org/wiki/Moving_average#Simple_moving_average
-  
+  Ref: https://en.wikipedia.org/wiki/Moving_average#Simple_moving_average
   """
   if isinstance(input, list):
     r = [np.empty_like(x) for x in input]
@@ -209,7 +206,7 @@ def RANK(
   input: np.ndarray | list[np.ndarray]
 ) -> np.ndarray | list[np.ndarray]:
   """
-  rank by group dim
+  Calculate rank cross group dimension, the ctx.groups() is the number of groups
   """
   if isinstance(input, list):
     r = [np.empty_like(x) for x in input]
@@ -224,7 +221,8 @@ def RCROSS(
   a: np.ndarray | list[np.ndarray], b: np.ndarray | list[np.ndarray]
 ) -> np.ndarray | list[np.ndarray]:
   """
-  RCROSE(A, B): Previous A > B, Current A <= B
+  For 2 arrays A and B, return true if A[i-1] > B[i-1] and A[i] <= B[i]
+  alias: death_cross, cross_le
   """
   if isinstance(a, list) and isinstance(b, list):
     r = [np.empty_like(x, dtype=bool) for x in a]
@@ -243,7 +241,7 @@ def REF(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
   """
-  Reference to value N periods ago
+  Right shift input array by `periods`, r[i] = input[i - periods]
   
   Ref: https://www.amibroker.com/guide/afl/ref.html
   """
@@ -260,7 +258,7 @@ def RLONGCROSS(
   a: np.ndarray | list[np.ndarray], b: np.ndarray | list[np.ndarray], n: int
 ) -> np.ndarray | list[np.ndarray]:
   """
-  RLONGCROSS(A,B,N): Previous N A > B, Current A <= B
+  For 2 arrays A and B, return true if previous N periods A > B, Current A <= B
   """
   if isinstance(a, list) and isinstance(b, list):
     r = [np.empty_like(x, dtype=bool) for x in a]
@@ -279,11 +277,9 @@ def SMA(
   input: np.ndarray | list[np.ndarray], n: int, m: int
 ) -> np.ndarray | list[np.ndarray]:
   """
-  Exponential Moving Average (variant of EMA)
+  Exponential Moving Average (variant of well-known EMA) weight = m / n
   
-  alpha = m / n
-  
-  https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average
+  Ref: https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average
   """
   if isinstance(input, list):
     r = [np.empty_like(x) for x in input]
@@ -298,7 +294,7 @@ def SUM(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
   """
-  Sum of value N periods ago
+  Calculate sum of values in preceding `periods` window
   
   If periods is 0, it calculates the cumulative sum from the first valid value.
   
@@ -317,9 +313,7 @@ def SUMBARS(
   input: np.ndarray | list[np.ndarray], amount: float
 ) -> np.ndarray | list[np.ndarray]:
   """
-  Sums X backwards until the sum is greater than or equal to A
-  
-  Returns the number of periods (bars) passed.
+  Calculate number of periods (bars) backwards until the sum of values is greater than or equal to `amount`
   
   Ref: https://www.amibroker.com/guide/afl/sumbars.html
   """
@@ -336,7 +330,7 @@ def TS_RANK(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
   """
-  rank by ts dim
+  Calculate rank in a sliding window with size `periods`
   """
   if isinstance(input, list):
     r = [np.empty_like(x) for x in input]

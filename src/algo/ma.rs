@@ -3,10 +3,9 @@ use rayon::prelude::*;
 
 use crate::algo::{Context, Error, is_normal, skip_nan_window::SkipNanWindow};
 
-/// Moving Average
+/// Simple Moving Average, also known as arithmetic moving average
 ///
-/// https://en.wikipedia.org/wiki/Moving_average#Simple_moving_average
-///
+/// Ref: https://en.wikipedia.org/wiki/Moving_average#Simple_moving_average
 ///
 pub fn ta_ma<NumT: Float + Send + Sync>(
   ctx: &Context,

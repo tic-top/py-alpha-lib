@@ -5,7 +5,7 @@ use rayon::prelude::*;
 
 use crate::algo::{Context, Error, is_normal, skip_nan_window::SkipNanWindow};
 
-/// Highest High Value
+/// Find highest value in a preceding `periods` window
 ///
 /// Ref: https://www.amibroker.com/guide/afl/hhv.html
 pub fn ta_hhv<NumT: Float + Send + Sync>(
@@ -17,7 +17,7 @@ pub fn ta_hhv<NumT: Float + Send + Sync>(
   run_extremum(ctx, r, input, periods, |a, b| a >= b, |_, _, val| val)
 }
 
-/// Lowest Low Value
+/// Find lowest value in a preceding `periods` window
 ///
 /// Ref: https://www.amibroker.com/guide/afl/llv.html
 pub fn ta_llv<NumT: Float + Send + Sync>(
@@ -29,7 +29,7 @@ pub fn ta_llv<NumT: Float + Send + Sync>(
   run_extremum(ctx, r, input, periods, |a, b| a <= b, |_, _, val| val)
 }
 
-/// Bars since Highest High Value
+/// The number of periods that have passed since the array reached its `periods` period high
 ///
 /// Ref: https://www.amibroker.com/guide/afl/hhvbars.html
 pub fn ta_hhvbars<NumT: Float + Send + Sync>(
@@ -48,7 +48,7 @@ pub fn ta_hhvbars<NumT: Float + Send + Sync>(
   )
 }
 
-/// Bars since Lowest Low Value
+/// The number of periods that have passed since the array reached its periods period low
 ///
 /// Ref: https://www.amibroker.com/guide/afl/llvbars.html
 pub fn ta_llvbars<NumT: Float + Send + Sync>(

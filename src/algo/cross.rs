@@ -3,9 +3,9 @@ use rayon::prelude::*;
 
 use crate::algo::{Context, Error, is_normal};
 
-/// CROSS(A, B): Previous A < B, Current A >= B
+/// For 2 arrays A and B, return true if A[i-1] < B[i-1] and A[i] >= B[i]
+/// alias: golden_cross, cross_ge
 ///
-/// Ref: https://www.amibroker.com/guide/afl/cross.html
 pub fn ta_cross<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [bool],
@@ -75,7 +75,8 @@ pub fn ta_cross<NumT: Float + Send + Sync>(
   Ok(())
 }
 
-/// RCROSE(A, B): Previous A > B, Current A <= B
+/// For 2 arrays A and B, return true if A[i-1] > B[i-1] and A[i] <= B[i]
+/// alias: death_cross, cross_le
 pub fn ta_rcross<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [bool],
@@ -136,7 +137,7 @@ pub fn ta_rcross<NumT: Float + Send + Sync>(
   Ok(())
 }
 
-/// LONGCROSS(A,B,N): Previous N A < B, Current A >= B
+/// For 2 arrays A and B, return true if previous N periods A < B, Current A >= B
 pub fn ta_longcross<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [bool],
@@ -248,7 +249,7 @@ pub fn ta_longcross<NumT: Float + Send + Sync>(
   Ok(())
 }
 
-/// RLONGCROSS(A,B,N): Previous N A > B, Current A <= B
+/// For 2 arrays A and B, return true if previous N periods A > B, Current A <= B
 pub fn ta_rlongcross<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [bool],

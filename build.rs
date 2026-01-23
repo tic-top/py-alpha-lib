@@ -12,12 +12,16 @@ enum TaType {
   Int(String),
   NumArray(String),
   BoolArray(String),
+  #[allow(dead_code)]
   IntArray(String),
+  #[allow(dead_code)]
   Bool(String),
+  #[allow(dead_code)]
   Context(String),
 }
 
 impl TaType {
+  #[allow(dead_code)]
   fn name(&self) -> &str {
     match self {
       TaType::None => "",
@@ -28,6 +32,19 @@ impl TaType {
       TaType::IntArray(n) => n,
       TaType::Bool(n) => n,
       TaType::Context(n) => n,
+    }
+  }
+
+  fn to_py_type_str(&self) -> String {
+    match self {
+      TaType::None => "None".to_string(),
+      TaType::Num(n) => format!("{}: float", n),
+      TaType::Int(n) => format!("{}: int", n),
+      TaType::NumArray(n) => format!("{}: np.ndarray[float]", n),
+      TaType::BoolArray(n) => format!("{}: np.ndarray[bool]", n),
+      TaType::IntArray(n) => format!("{}: np.ndarray[int]", n),
+      TaType::Bool(n) => format!("{}: bool", n),
+      TaType::Context(n) => format!("{}: Context", n),
     }
   }
 }
@@ -223,6 +240,7 @@ fn build_py_bindings(functions: &[TaFunc]) -> Result<()> {
     writeln!(code, "  ) -> PyResult<()> {{")?;
 
     writeln!(code, "    // 1. get context")?;
+    writeln!(code, "    #[allow(unused_mut)]")?;
     writeln!(code, "    let mut ctx = ctx(py);")?;
 
     writeln!(code, "    // 2. check input type and do dispatch")?;
@@ -274,8 +292,8 @@ fn build_py_bindings(functions: &[TaFunc]) -> Result<()> {
       // `r_name` extraction depends on its type.
 
       let r_is_bool = matches!(arrays[0].1, TaType::BoolArray(_));
-      let a_is_bool = matches!(arrays[1].1, TaType::BoolArray(_));
-      let b_is_bool = matches!(arrays[2].1, TaType::BoolArray(_));
+      // let a_is_bool = matches!(arrays[1].1, TaType::BoolArray(_));
+      // let b_is_bool = matches!(arrays[2].1, TaType::BoolArray(_));
 
       // We only implement typical numeric CROSS(Num, Num) -> Bool for now.
       // r: BoolArray, a: NumArray, b: NumArray.
@@ -1031,7 +1049,9 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
       let b_name = arrays[2].0;
 
       let r_is_bool = matches!(arrays[0].1, TaType::BoolArray(_));
+      #[allow(unused)]
       let a_is_bool = matches!(arrays[1].1, TaType::BoolArray(_));
+      #[allow(unused)]
       let b_is_bool = matches!(arrays[2].1, TaType::BoolArray(_));
 
       let mut py_params = vec![
@@ -1190,6 +1210,39 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
   Ok(())
 }
 
+fn build_algo_md(functions: &Vec<TaFunc>) -> Result<()> {
+  let mut file = fs::File::create("python/alpha/algo.md")?;
+  writeln!(file, "List of available functions with python type hints:")?;
+  writeln!(file, "")?;
+  writeln!(
+    file,
+    "the `np.ndarray` is `ndarray` type in `numpy` package"
+  )?;
+  writeln!(file, "")?;
+  for func in functions {
+    writeln!(
+      file,
+      "- {}({}): {}",
+      func.name.to_uppercase(),
+      func
+        .params
+        .iter()
+        .skip(2)
+        .map(|p| p.to_py_type_str())
+        .collect::<Vec<_>>()
+        .join(", "),
+      func
+        .doc
+        .split('\n')
+        .take_while(|line| !line.starts_with("Ref:"))
+        .collect::<Vec<_>>()
+        .join(" ")
+        .trim()
+    )?;
+  }
+  Ok(())
+}
+
 fn main() -> Result<()> {
   let src_dir = "src/algo";
   let dir = fs::read_dir(src_dir)?;
@@ -1201,12 +1254,15 @@ fn main() -> Result<()> {
     }
     let path = entry.path();
     if let Ok(a) = parse_ta_file(&path) {
-      // skip ema, we will write it as template by hand
-      functions.extend(a.into_iter().filter(|f| f.name != "ema"));
+      functions.extend(a.into_iter());
     }
   }
   functions.sort_by_key(|a| a.name.clone());
 
+  build_algo_md(&functions)?;
+
+  // skip ema, we will write it as template by hand
+  functions.retain(|f| f.name != "ema");
   build_py_bindings(&functions)?;
   build_algo_py(&functions)?;
 

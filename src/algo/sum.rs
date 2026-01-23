@@ -3,7 +3,7 @@ use rayon::prelude::*;
 
 use crate::algo::{Context, Error, is_normal, skip_nan_window::SkipNanWindow};
 
-/// Sum of value N periods ago
+/// Calculate sum of values in preceding `periods` window
 ///
 /// If periods is 0, it calculates the cumulative sum from the first valid value.
 ///
@@ -140,9 +140,7 @@ pub fn ta_sum<NumT: Float + Send + Sync>(
   Ok(())
 }
 
-/// Sums X backwards until the sum is greater than or equal to A
-///
-/// Returns the number of periods (bars) passed.
+/// Calculate number of periods (bars) backwards until the sum of values is greater than or equal to `amount`
 ///
 /// Ref: https://www.amibroker.com/guide/afl/sumbars.html
 pub fn ta_sumbars<NumT: Float + Send + Sync>(

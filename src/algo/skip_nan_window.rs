@@ -24,10 +24,6 @@ impl Item {
       no_nan_count,
     }
   }
-
-  pub fn has_nan(&self) -> bool {
-    self.no_nan_count != (self.end - self.start + 1)
-  }
 }
 
 /// Iterator over a window of data

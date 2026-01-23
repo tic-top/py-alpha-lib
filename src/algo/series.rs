@@ -3,7 +3,7 @@ use rayon::prelude::*;
 
 use crate::algo::{Context, Error, is_normal};
 
-/// Reference to value N periods ago
+/// Right shift input array by `periods`, r[i] = input[i - periods]
 ///
 /// Ref: https://www.amibroker.com/guide/afl/ref.html
 pub fn ta_ref<NumT: Float + Send + Sync>(
@@ -48,7 +48,7 @@ pub fn ta_ref<NumT: Float + Send + Sync>(
   Ok(())
 }
 
-/// Bars since last condition true
+/// Calculate number of bars since last condition true
 ///
 /// Ref: https://www.amibroker.com/guide/afl/barslast.html
 pub fn ta_barslast<NumT: Float + Send + Sync>(
@@ -83,7 +83,7 @@ pub fn ta_barslast<NumT: Float + Send + Sync>(
   Ok(())
 }
 
-/// Bars since first condition true
+/// Calculate number of bars since first condition true
 ///
 /// Ref: https://www.amibroker.com/guide/afl/barssince.html
 pub fn ta_barssince<NumT: Float + Send + Sync>(
@@ -122,7 +122,7 @@ pub fn ta_barssince<NumT: Float + Send + Sync>(
   Ok(())
 }
 
-/// Count periods where condition is true
+/// Calculate number of periods where condition is true in passed `periods` window
 ///
 /// Ref: https://www.amibroker.com/guide/afl/count.html
 pub fn ta_count<NumT: Float + Send + Sync>(
