@@ -35,7 +35,7 @@ For financial data analysis, there are many algorithms required a rolling window
 You can install the library using pip:
 
 ```bash
-pip install alpha-lib
+pip install py-alpha-lib
 ```
 
 ## Simple Example
