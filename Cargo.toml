@@ -2,6 +2,7 @@
 name = "alpha"
 version = "0.1.0"
 edition = "2024"
+authors = ["ElseJJ"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
@@ -9,7 +10,7 @@ name = "alpha"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-pyo3 = {version = "0.27.0", features = ["abi3"]}
+pyo3 = { version = "0.27.0", features = ["abi3"] }
 pyo3-log = "0.13"
 thiserror = "2"
 numpy = "0.27.0"
