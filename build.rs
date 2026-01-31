@@ -1268,6 +1268,9 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
   let out_file = "python/alpha/algo/algo_gen.py";
   let mut file = fs::File::create(out_file)?;
 
+  writeln!(file, "# Copyright 2026 MSD-RS Project LiJia")?;
+  writeln!(file, "# SPDX-License-Identifier: BSD-2-Clause")?;
+  writeln!(file, "")?;
   writeln!(file, "# THIS FILE IS AUTO-GENERATED, DO NOT EDIT")?;
   writeln!(file, "")?;
   writeln!(file, "import numpy as np")?;
