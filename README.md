@@ -13,6 +13,7 @@ For financial data analysis, there are many algorithms required a rolling window
 | COUNT      | Count periods where condition is true                        | https://www.amibroker.com/guide/afl/count.html                          |
 | CROSS      | CROSS(A, B): Previous A < B, Current A >= B                  | https://www.amibroker.com/guide/afl/cross.html                          |
 | DMA        | Exponential Moving Average                                   | https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average |
+| EMA        | Exponential Moving Average(weight = 2 / (n + 1))             | https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average |
 | HHV        | Highest High Value                                           | https://www.amibroker.com/guide/afl/hhv.html                            |
 | HHVBARS    | Bars since Highest High Value                                | https://www.amibroker.com/guide/afl/hhvbars.html                        |
 | LLV        | Lowest Low Value                                             | https://www.amibroker.com/guide/afl/llv.html                            |
@@ -23,7 +24,7 @@ For financial data analysis, there are many algorithms required a rolling window
 | RCROSS     | RCROSE(A, B): Previous A > B, Current A <= B                 |                                                                         |
 | REF        | Reference to value N periods ago                             | https://www.amibroker.com/guide/afl/ref.html                            |
 | RLONGCROSS | RLONGCROSS(A,B,N): Previous N A > B, Current A <= B          |                                                                         |
-| SMA        | Exponential Moving Average (variant of EMA)                  | https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average |
+| SMA        | Exponential Moving Average (weight = m / n)                  | https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average |
 | SUM        | Sum of value N periods ago                                   | https://www.amibroker.com/guide/afl/sum.html                            |
 | SUMBARS    | Sums X backwards until the sum is greater than or equal to A | https://www.amibroker.com/guide/afl/sumbars.html                        |
 | TS_RANK    | rank by ts dim                                               |
@@ -80,6 +81,10 @@ You may notice that some functions have different behaviors based on the context
   - `FLAG_SKIP_NAN`: When this flag is set, functions will skip NaN values during computations.
   - `FLAG_STRICTLY_CYCLE`: When this flag is set, functions will strictly cycle over the data, meaning that initial periods that do not have enough data will be filled with NaN.
   - You can combine multiple flags using bitwise OR operation, e.g., `flags=FLAG_SKIP_NAN | FLAG_STRICTLY_CYCLE`.
+
+## Vibe Coding
+
+When you need LLM to help you implement new factor in python, you can let LLM known which functions are available in `alpha-lib` by providing [the list of supported functions](python/alpha/algo.md) as context.
 
 ## Factor expression to Python code
 
