@@ -4,6 +4,7 @@ the `np.ndarray` is `ndarray` type in `numpy` package
 
 - BARSLAST(input: np.ndarray[bool]): Calculate number of bars since last condition true
 - BARSSINCE(input: np.ndarray[bool]): Calculate number of bars since first condition true
+- BINS(input: np.ndarray[float], bins: int): Discretize the input into n bins, the ctx.groups() is the number of groups  Bins are 0-based index. Same value are assigned to the same bin.
 - CORR(x: np.ndarray[float], y: np.ndarray[float], periods: int): Calculate Correlation over a moving window  Correlation = Cov(X, Y) / (StdDev(X) * StdDev(Y))
 - COUNT(input: np.ndarray[bool], periods: int): Calculate number of periods where condition is true in passed `periods` window
 - COV(x: np.ndarray[float], y: np.ndarray[float], periods: int): Calculate Covariance over a moving window  Covariance = (SumXY - (SumX * SumY) / N) / (N - 1)
@@ -19,6 +20,7 @@ the `np.ndarray` is `ndarray` type in `numpy` package
 - LONGCROSS(a: np.ndarray[float], b: np.ndarray[float], n: int): For 2 arrays A and B, return true if previous N periods A < B, Current A >= B
 - LWMA(input: np.ndarray[float], periods: int): Linear Weighted Moving Average  LWMA = SUM(Price * Weight) / SUM(Weight)
 - MA(input: np.ndarray[float], periods: int): Simple Moving Average, also known as arithmetic moving average
+- NEUTRALIZE(category: np.ndarray[float], input: np.ndarray[float]): 
 - PRODUCT(input: np.ndarray[float], periods: int): Calculate product of values in preceding `periods` window  If periods is 0, it calculates the cumulative product from the first valid value.
 - RANK(input: np.ndarray[float]): Calculate rank percentage cross group dimension, the ctx.groups() is the number of groups Same value are averaged
 - RCROSS(a: np.ndarray[float], b: np.ndarray[float]): For 2 arrays A and B, return true if A[i-1] > B[i-1] and A[i] <= B[i] alias: death_cross, cross_le

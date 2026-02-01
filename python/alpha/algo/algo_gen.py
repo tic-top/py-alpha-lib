@@ -41,6 +41,24 @@ def BARSSINCE(
     _algo.barssince(r, input)
     return r
 
+def BINS(
+  input: np.ndarray | list[np.ndarray], bins: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Discretize the input into n bins, the ctx.groups() is the number of groups
+  
+  Bins are 0-based index.
+  Same value are assigned to the same bin.
+  """
+  if isinstance(input, list):
+    r = [np.empty_like(x) for x in input]
+    _algo.bins(r, input, bins)
+    return r
+  else:
+    r = np.empty_like(input)
+    _algo.bins(r, input, bins)
+    return r
+
 def CORR(
   x: np.ndarray | list[np.ndarray], y: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
@@ -305,6 +323,22 @@ def MA(
   else:
     r = np.empty_like(input)
     _algo.ma(r, input, periods)
+    return r
+
+def NEUTRALIZE(
+  category: np.ndarray | list[np.ndarray], input: np.ndarray | list[np.ndarray]
+) -> np.ndarray | list[np.ndarray]:
+  if isinstance(category, list) and isinstance(input, list):
+    r = [np.empty_like(x) for x in category]
+    category = [x.astype(float) for x in category]
+    input = [x.astype(float) for x in input]
+    _algo.neutralize(r, category, input)
+    return r
+  else:
+    r = np.empty_like(category)
+    category = category.astype(float)
+    input = input.astype(float)
+    _algo.neutralize(r, category, input)
     return r
 
 def PRODUCT(
