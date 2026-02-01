@@ -81,6 +81,7 @@ where
         let mut sum_y = NumT::zero();
         let mut sum_xy_1based = NumT::zero();
         let mut count = 0;
+        let mut nan_in_window = 0;
         
         let pre_fill_start = if start >= periods { start - periods } else { 0 };
         for k in pre_fill_start..start {
@@ -92,9 +93,7 @@ where
                  sum_xy_1based = sum_xy_1based + n_t * val;
              } else {
                  count += 1;
-                 let n_t = NumT::from(count).unwrap();
-                 sum_y = sum_y + val;
-                 sum_xy_1based = sum_xy_1based + n_t * val;
+                 nan_in_window += 1;
              }
         }
 
@@ -107,20 +106,31 @@ where
         {
            count += 1;
            let n_t = NumT::from(count).unwrap();
-           sum_y = sum_y + *c;
-           sum_xy_1based = sum_xy_1based + n_t * *c;
+           
+           if c.is_normal() {
+               sum_y = sum_y + *c;
+               sum_xy_1based = sum_xy_1based + n_t * *c;
+           } else {
+               nan_in_window += 1;
+           }
            
            if count > periods {
               let old_idx = n - periods;
               let old = x[old_idx];
               
               sum_xy_1based = sum_xy_1based - sum_y;
-              sum_y = sum_y - old;
+              if old.is_normal() {
+                 sum_y = sum_y - old;
+              } else {
+                 nan_in_window -= 1;
+              }
               count -= 1;
            }
            
            if count == periods {
-               if ctx.is_strictly_cycle() && n < periods - 1 {
+               if nan_in_window > 0 {
+                  *r = NumT::nan();
+               } else if ctx.is_strictly_cycle() && n < periods - 1 {
                    *r = NumT::nan();
                } else {
                    let n_val = NumT::from(periods).unwrap();
