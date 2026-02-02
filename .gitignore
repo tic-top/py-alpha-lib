@@ -75,3 +75,4 @@ uv.lock
 dataPerformance.*
 
 .cargo/
+cargo.lock

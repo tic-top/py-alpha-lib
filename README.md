@@ -7,7 +7,6 @@ For financial data analysis, there are many algorithms required a rolling window
 ## Algorithms
 
 | Name       | Description                                                  | Ref Link                                                                |
-| Name       | Description                                                  | Ref Link                                                                |
 | ---------- | ------------------------------------------------------------ | ----------------------------------------------------------------------- |
 | BARSLAST   | Calculate number of bars since last condition true           | https://www.amibroker.com/guide/afl/barslast.html                       |
 | BARSSINCE  | Calculate number of bars since first condition true          | https://www.amibroker.com/guide/afl/barssince.html                      |
