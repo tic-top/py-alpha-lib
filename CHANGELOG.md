@@ -4,12 +4,14 @@
 
 ### Added
 
-- BINS
-- FRET
-- INTERCEPT
-- NEUTRALIZE
+- BINS @zhaojun6969
+- FRET @zhaojun6969 
+- INTERCEPT @zhaojun6969
+- NEUTRALIZE @zhaojun6969
 - REGBETA
 - REGRESI
 - SUMIF
 
 See [algo.md](python/alpha/algo.md) for details.
+
+Thanks @zhaojun6969, our first contributor!
