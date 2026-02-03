@@ -6,7 +6,7 @@ use rayon::prelude::*;
 
 use crate::algo::{Context, Error, is_normal, skip_nan_window::SkipNanWindow};
 
-fn ta_linear_reg_core<NumT, F>(
+fn linear_reg_core<NumT, F>(
   ctx: &Context,
   r: &mut [NumT],
   input: &[NumT],
@@ -167,7 +167,7 @@ pub fn ta_slope<NumT: Float + Send + Sync>(
   input: &[NumT],
   periods: usize,
 ) -> Result<(), Error> {
-  ta_linear_reg_core(ctx, r, input, periods, |n, sum_x, sum_x2, sum_y, _sum_y2, sum_xy| {
+  linear_reg_core(ctx, r, input, periods, |n, sum_x, sum_x2, sum_y, _sum_y2, sum_xy| {
     // slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x^2)
     let numerator = n * sum_xy - sum_x * sum_y;
     let denominator = n * sum_x2 - sum_x * sum_x;
@@ -190,7 +190,7 @@ pub fn ta_intercept<NumT: Float + Send + Sync>(
   input: &[NumT],
   periods: usize,
 ) -> Result<(), Error> {
-  ta_linear_reg_core(ctx, r, input, periods, |n, sum_x, sum_x2, sum_y, _sum_y2, sum_xy| {
+  linear_reg_core(ctx, r, input, periods, |n, sum_x, sum_x2, sum_y, _sum_y2, sum_xy| {
      // Intercept: b = (sum_y * sum_x2 - sum_x * sum_xy) / (n * sum_x2 - sum_x^2)
      let numerator = sum_y * sum_x2 - sum_x * sum_xy;
      let denominator = n * sum_x2 - sum_x * sum_x;
@@ -207,13 +207,13 @@ pub fn ta_intercept<NumT: Float + Send + Sync>(
 ///
 /// Calculates the correlation coefficient between the input series and the time index.
 ///
-pub fn ta_ts_correlation<NumT: Float + Send + Sync>(
+pub fn ta_ts_corr<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [NumT],
   input: &[NumT],
   periods: usize,
 ) -> Result<(), Error> {
-  ta_linear_reg_core(ctx, r, input, periods, |n, sum_x, sum_x2, sum_y, sum_y2, sum_xy| {
+  linear_reg_core(ctx, r, input, periods, |n, sum_x, sum_x2, sum_y, sum_y2, sum_xy| {
       // r = (n * sum_xy - sum_x * sum_y) / sqrt( (n * sum_x2 - sum_x^2) * (n * sum_y2 - sum_y^2) )
       let numerator = n * sum_xy - sum_x * sum_y;
       let var_x = n * sum_x2 - sum_x * sum_x;
@@ -315,12 +315,12 @@ mod tests {
   }
 
   #[test]
-  fn test_ta_ts_correlation() {
+  fn test_ta_ts_corr() {
     let input = vec![1.0, 2.0, 3.0, 3.0, 2.0, 1.0];
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_correlation(&ctx, &mut r, &input, periods).unwrap();
+    ta_ts_corr(&ctx, &mut r, &input, periods).unwrap();
     
     let expected = vec![f64::NAN, f64::NAN, 1.0, 0.8660254037844386, -0.8660254037844386, -1.0];
     assert_vec_eq_nan(&r, &expected);

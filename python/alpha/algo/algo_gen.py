@@ -586,7 +586,7 @@ def SUMIF(
     _algo.sumif(r, input, condition, periods)
     return r
 
-def TS_CORRELATION(
+def TS_CORR(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
   """
@@ -596,11 +596,11 @@ def TS_CORRELATION(
   """
   if isinstance(input, list):
     r = [np.empty_like(x) for x in input]
-    _algo.ts_correlation(r, input, periods)
+    _algo.ts_corr(r, input, periods)
     return r
   else:
     r = np.empty_like(input)
-    _algo.ts_correlation(r, input, periods)
+    _algo.ts_corr(r, input, periods)
     return r
 
 def TS_RANK(
