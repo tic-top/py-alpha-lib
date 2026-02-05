@@ -4,6 +4,7 @@ from pathlib import Path
 import logging
 import argparse
 import pd_
+import pl_
 import al
 import pandas as pd
 
@@ -42,17 +43,40 @@ def download_data():
 
 def parse_args():
   parser = argparse.ArgumentParser()
-  parser.add_argument("no", nargs="*", type=int, help="alpha numbers to run, e.g., 1 2 3")
-  parser.add_argument("-s", "--start", type=int, required=False, help="start alpha number")
-  parser.add_argument("-e", "--end", type=int, required=False, help="end alpha number")
-  parser.add_argument("-v", "--verbose", action="store_true", required=False, help="enable verbose logging")
   parser.add_argument(
-    "-d", "--data", type=str, required=False, default="dataPerformance.csv",
+    "no", nargs="*", type=int, help="alpha numbers to run, e.g., 1 2 3"
+  )
+  parser.add_argument(
+    "-s", "--start", type=int, required=False, help="start alpha number"
+  )
+  parser.add_argument("-e", "--end", type=int, required=False, help="end alpha number")
+  parser.add_argument(
+    "-v",
+    "--verbose",
+    action="store_true",
+    required=False,
+    help="enable verbose logging",
+  )
+  parser.add_argument(
+    "-d",
+    "--data",
+    type=str,
+    required=False,
+    default="dataPerformance.csv",
     help="data file path",
   )
-  parser.add_argument("-o", "--output", type=str, required=False, help="save output to file")
-  parser.add_argument("--with-pd", action="store_true", default=False, help="run pandas implementation")
-  parser.add_argument("--with-al", action="store_true", default=False, help="run alpha-lib implementation")
+  parser.add_argument(
+    "-o", "--output", type=str, required=False, help="save output to file"
+  )
+  parser.add_argument(
+    "--with-pd", action="store_true", default=False, help="run pandas implementation"
+  )
+  parser.add_argument(
+    "--with-pl", action="store_true", default=False, help="run polars implementation"
+  )
+  parser.add_argument(
+    "--with-al", action="store_true", default=False, help="run alpha-lib implementation"
+  )
   return parser.parse_args()
 
 
@@ -62,6 +86,8 @@ def main():
   results = []
   if args.with_pd:
     results.append(pd_.main(args))
+  if args.with_pl:
+    results.append(pl_.main(args))
   if args.with_al:
     results.append(al.main(args))
 
@@ -69,8 +95,14 @@ def main():
     return
 
   df = pd.concat(results, axis=1)
-  if len(results) == 2:
-    df["speedup"] = (df["pandasTime"] / df["alphaLibTime"]).astype(int)
+
+  # Calculate speedups if relevant columns exist
+  if "pandasTime" in df.columns:
+    if "alphaLibTime" in df.columns:
+      df["speedup_al"] = (df["pandasTime"] / df["alphaLibTime"]).astype(int)
+    if "polarsTime" in df.columns:
+      df["speedup_pl"] = (df["pandasTime"] / df["polarsTime"]).astype(int)
+
   if args.output:
     df.to_csv(args.output)
   else:
