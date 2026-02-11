@@ -26,6 +26,7 @@ start: expression
 ?atom: MINUS atom -> neg
      | func_call
      | NUMBER
+     | SELF
      | NAME
      | NAME "." NAME -> dotted_name
      | "(" expression ")"
@@ -37,6 +38,7 @@ func_call: NAME "(" [arguments] ")"
 arguments: expression ("," expression)*
 
 // Terminals
+SELF: "SELF"
 PLUS: "+"
 MINUS: "-"
 STAR: "*"

@@ -87,6 +87,8 @@ Control computation behavior via `alpha.set_ctx()`:
 | REGBETA | Regression coefficient (beta) |
 | REGRESI | Regression residual |
 | RLONGCROSS | A > B for N periods then A <= B |
+| SCAN_ADD | Conditional cumulative sum (SELF recursion) |
+| SCAN_MUL | Conditional cumulative product (SELF recursion) |
 | SLOPE | Linear regression slope |
 | SMA | EMA variant (weight = m/n) |
 | STDDEV | Rolling standard deviation |
@@ -118,6 +120,21 @@ python -m alpha.lang examples/wq101/alpha101.txt
 ```
 
 Reads expressions from [`examples/wq101/alpha101.txt`](examples/wq101/alpha101.txt) and generates Python code using alpha-lib functions.
+
+## GTJA Alpha 191
+
+Implementation of 190/191 factors from the GTJA (国泰君安) Alpha 191 factor set in [`examples/gtja191/`](examples/gtja191/):
+
+| Metric | Value |
+|---|---|
+| Computable | 190 / 191 |
+| Compute time | ~4.5s (4000 stocks × 261 days) |
+| Avg per factor | 24ms |
+
+```bash
+python -m examples.gtja191.al 143     # run specific factor
+python -m examples.gtja191.al          # run all factors
+```
 
 ## WorldQuant Alpha 101
 

@@ -1432,6 +1432,23 @@ fn build_py_bindings(functions: &[TaFunc]) -> Result<()> {
   Ok(())
 }
 
+/// Return the Python conversion call for an array parameter.
+/// NumArray → "_to_f64(x)", BoolArray → "_to_bool(x)"
+fn py_convert(ty: &TaType, expr: &str) -> String {
+  match ty {
+    TaType::BoolArray(_) => format!("_to_bool({})", expr),
+    _ => format!("_to_f64({})", expr),
+  }
+}
+
+/// Return the list-map version: "[_to_f64(x) for x in arr]" or "[_to_bool(x) for x in arr]"
+fn py_convert_list(ty: &TaType, name: &str) -> String {
+  match ty {
+    TaType::BoolArray(_) => format!("[_to_bool(x) for x in {}]", name),
+    _ => format!("[_to_f64(x) for x in {}]", name),
+  }
+}
+
 fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
   let out_file = "python/alpha/algo/algo_gen.py";
   let mut file = fs::File::create(out_file)?;
@@ -1449,6 +1466,12 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
   writeln!(file, "  if a.dtype == np.float64:")?;
   writeln!(file, "    return a")?;
   writeln!(file, "  return a.astype(np.float64)")?;
+  writeln!(file, "")?;
+  writeln!(file, "def _to_bool(a):")?;
+  writeln!(file, "  \"\"\"Ensure array is bool. Zero-copy if already bool.\"\"\"")?;
+  writeln!(file, "  if a.dtype == np.bool_:")?;
+  writeln!(file, "    return a")?;
+  writeln!(file, "  return a.astype(bool)")?;
   writeln!(file, "")?;
 
   for func in functions {
@@ -1526,8 +1549,12 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
         a_name, b_name, c_name
       )?;
 
-      for name in [a_name, b_name, c_name] {
-        writeln!(file, "    {} = [_to_f64(x) for x in {}]", name, name)?;
+      for (name, ty) in [
+        (a_name, arrays[1].1),
+        (b_name, arrays[2].1),
+        (c_name, arrays[3].1),
+      ] {
+        writeln!(file, "    {} = {}", name, py_convert_list(ty, name))?;
       }
       writeln!(
         file,
@@ -1544,8 +1571,12 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
       writeln!(file, "    return {}", r_name)?;
 
       writeln!(file, "  else:")?;
-      for name in [a_name, b_name, c_name] {
-        writeln!(file, "    {} = _to_f64({})", name, name)?;
+      for (name, ty) in [
+        (a_name, arrays[1].1),
+        (b_name, arrays[2].1),
+        (c_name, arrays[3].1),
+      ] {
+        writeln!(file, "    {} = {}", name, py_convert(ty, name))?;
       }
       writeln!(file, "    {} = np.empty_like({})", r_name, a_name)?;
 
@@ -1613,20 +1644,14 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
       // If we want float 0/1, we should convert?
       // Let's stick to bool for now, user can cast.
 
-      writeln!(
-        file,
-        "    {} = [_to_f64(x) for x in {}]",
-        a_name, a_name
-      )?;
-      writeln!(
-        file,
-        "    {} = [_to_f64(x) for x in {}]",
-        b_name, b_name
-      )?;
+      writeln!(file, "    {} = {}", a_name, py_convert_list(arrays[1].1, a_name))?;
+      writeln!(file, "    {} = {}", b_name, py_convert_list(arrays[2].1, b_name))?;
+      // output array: use first NumArray for shape; bool output if r is bool
+      let first_num_name = if a_is_bool { b_name } else { a_name };
       writeln!(
         file,
         "    {} = [np.empty_like(x{}) for x in {}]",
-        r_name, dtype, a_name
+        r_name, dtype, first_num_name
       )?;
 
       writeln!(
@@ -1638,9 +1663,9 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
       writeln!(file, "    return {}", r_name)?;
 
       writeln!(file, "  else:")?;
-      writeln!(file, "    {} = _to_f64({})", a_name, a_name)?;
-      writeln!(file, "    {} = _to_f64({})", b_name, b_name)?;
-      writeln!(file, "    {} = np.empty_like({}{})", r_name, a_name, dtype)?;
+      writeln!(file, "    {} = {}", a_name, py_convert(arrays[1].1, a_name))?;
+      writeln!(file, "    {} = {}", b_name, py_convert(arrays[2].1, b_name))?;
+      writeln!(file, "    {} = np.empty_like({}{})", r_name, first_num_name, dtype)?;
 
       writeln!(
         file,

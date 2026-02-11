@@ -376,11 +376,11 @@ def alpha_053(ctx):
 
 
 
-# (-1 * RANK((STD(ABS(CLOSE - OPEN)) + (CLOSE - OPEN)) + CORR(CLOSE, OPEN,10)))
+# (-1 * RANK((STD(ABS(CLOSE - OPEN), 10) + (CLOSE - OPEN)) + CORR(CLOSE, OPEN, 10)))
 def alpha_054(ctx):
   _CLOSE = ctx('CLOSE')
   _OPEN = ctx('OPEN')
-  return (-1 * ctx.RANK(((ctx.STD(ctx.ABS((_CLOSE - _OPEN))) + (_CLOSE - _OPEN)) + ctx.CORR(_CLOSE, _OPEN, 10))))
+  return (-1 * ctx.RANK(((ctx.STD(ctx.ABS((_CLOSE - _OPEN)), 10) + (_CLOSE - _OPEN)) + ctx.CORR(_CLOSE, _OPEN, 10))))
 
 
 
@@ -897,10 +897,10 @@ def alpha_126(ctx):
 
 
 
-# (MEAN((100*(CLOSE-MAX(CLOSE,12))/(MAX(CLOSE,12)))^2))^(1/2)
+# (MEAN((100*(CLOSE-TSMAX(CLOSE,12))/(TSMAX(CLOSE,12)))^2, 12))^(1/2)
 def alpha_127(ctx):
   _CLOSE = ctx('CLOSE')
-  return np.power(ctx.MEAN(np.power((100 * (_CLOSE - ctx.MAX(_CLOSE, 12)) / ctx.MAX(_CLOSE, 12)), 2)), (1 / 2))
+  return np.power(ctx.MEAN(np.power((100 * (_CLOSE - ctx.TSMAX(_CLOSE, 12)) / ctx.TSMAX(_CLOSE, 12)), 2), 12), (1 / 2))
 
 
 
@@ -1013,8 +1013,7 @@ def alpha_142(ctx):
 # CLOSE>DELAY(CLOSE,1)?(CLOSE-DELAY(CLOSE,1))/DELAY(CLOSE,1)*SELF:SELF
 def alpha_143(ctx):
   _CLOSE = ctx('CLOSE')
-  _SELF = ctx('SELF')
-  return np.where((_CLOSE > ctx.DELAY(_CLOSE, 1)), ((_CLOSE - ctx.DELAY(_CLOSE, 1)) / ctx.DELAY(_CLOSE, 1) * _SELF), _SELF)
+  return ctx.SCAN_MUL((_CLOSE - ctx.DELAY(_CLOSE, 1)) / ctx.DELAY(_CLOSE, 1), (_CLOSE > ctx.DELAY(_CLOSE, 1)))
 
 
 
@@ -1167,10 +1166,10 @@ def alpha_164(ctx):
 
 
 
-# MAX(SUMAC(CLOSE-MEAN(CLOSE,48)))-MIN(SUMAC(CLOSE-MEAN(CLOSE,48)))/STD(CLOSE,48)
+# TSMAX(SUM(CLOSE-MEAN(CLOSE,48),48),48)-TSMIN(SUM(CLOSE-MEAN(CLOSE,48),48),48)/STD(CLOSE,48)
 def alpha_165(ctx):
   _CLOSE = ctx('CLOSE')
-  return (ctx.MAX(ctx.SUMAC((_CLOSE - ctx.MEAN(_CLOSE, 48)))) - (ctx.MIN(ctx.SUMAC((_CLOSE - ctx.MEAN(_CLOSE, 48)))) / ctx.STD(_CLOSE, 48)))
+  return (ctx.TSMAX(ctx.SUM((_CLOSE - ctx.MEAN(_CLOSE, 48)), 48), 48) - (ctx.TSMIN(ctx.SUM((_CLOSE - ctx.MEAN(_CLOSE, 48)), 48), 48) / ctx.STD(_CLOSE, 48)))
 
 
 
@@ -1286,11 +1285,11 @@ def alpha_180(ctx):
 
 
 
-# SUM(((CLOSE/DELAY(CLOSE,1)-1)-MEAN((CLOSE/DELAY(CLOSE,1)-1),20))-(BANCHMARKINDEXCLOSE-MEAN(BANCHMARKINDEXCLOSE,20))^2,20)/SUM((BANCHMARKINDEXCLOSE-MEAN(BANCHMARKINDEXCLOSE,20))^3)
+# SUM(((CLOSE/DELAY(CLOSE,1)-1)-MEAN((CLOSE/DELAY(CLOSE,1)-1),20))-(BANCHMARKINDEXCLOSE-MEAN(BANCHMARKINDEXCLOSE,20))^2,20)/SUM((BANCHMARKINDEXCLOSE-MEAN(BANCHMARKINDEXCLOSE,20))^3,20)
 def alpha_181(ctx):
   _BANCHMARKINDEXCLOSE = ctx('BANCHMARKINDEXCLOSE')
   _CLOSE = ctx('CLOSE')
-  return (ctx.SUM(((((_CLOSE / ctx.DELAY(_CLOSE, 1)) - 1) - ctx.MEAN(((_CLOSE / ctx.DELAY(_CLOSE, 1)) - 1), 20)) - np.power((_BANCHMARKINDEXCLOSE - ctx.MEAN(_BANCHMARKINDEXCLOSE, 20)), 2)), 20) / ctx.SUM(np.power((_BANCHMARKINDEXCLOSE - ctx.MEAN(_BANCHMARKINDEXCLOSE, 20)), 3)))
+  return (ctx.SUM(((((_CLOSE / ctx.DELAY(_CLOSE, 1)) - 1) - ctx.MEAN(((_CLOSE / ctx.DELAY(_CLOSE, 1)) - 1), 20)) - np.power((_BANCHMARKINDEXCLOSE - ctx.MEAN(_BANCHMARKINDEXCLOSE, 20)), 2)), 20) / ctx.SUM(np.power((_BANCHMARKINDEXCLOSE - ctx.MEAN(_BANCHMARKINDEXCLOSE, 20)), 3), 20))
 
 
 
@@ -1304,10 +1303,10 @@ def alpha_182(ctx):
 
 
 
-# MAX(SUMAC(CLOSE-MEAN(CLOSE,24)))-MIN(SUMAC(CLOSE-MEAN(CLOSE,24)))/STD(CLOSE,24)
+# TSMAX(SUM(CLOSE-MEAN(CLOSE,24),24),24)-TSMIN(SUM(CLOSE-MEAN(CLOSE,24),24),24)/STD(CLOSE,24)
 def alpha_183(ctx):
   _CLOSE = ctx('CLOSE')
-  return (ctx.MAX(ctx.SUMAC((_CLOSE - ctx.MEAN(_CLOSE, 24)))) - (ctx.MIN(ctx.SUMAC((_CLOSE - ctx.MEAN(_CLOSE, 24)))) / ctx.STD(_CLOSE, 24)))
+  return (ctx.TSMAX(ctx.SUM((_CLOSE - ctx.MEAN(_CLOSE, 24)), 24), 24) - (ctx.TSMIN(ctx.SUM((_CLOSE - ctx.MEAN(_CLOSE, 24)), 24), 24) / ctx.STD(_CLOSE, 24)))
 
 
 

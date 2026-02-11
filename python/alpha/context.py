@@ -381,6 +381,17 @@ class ExecContext:
 
   SUMIF = TS_SUMIF       # gtja191
 
+  # ── TS: Conditional Scan (SELF recursion) ───────────────────────────
+  #   GTJA: SELF-referencing patterns
+
+  def SCAN_MUL(self, operand: np.ndarray, cond: np.ndarray) -> np.ndarray:
+    return alpha.SCAN_MUL(np.asarray(operand, dtype=np.float64),
+                          np.asarray(cond, dtype=bool))
+
+  def SCAN_ADD(self, operand: np.ndarray, cond: np.ndarray) -> np.ndarray:
+    return alpha.SCAN_ADD(np.asarray(operand, dtype=np.float64),
+                          np.asarray(cond, dtype=bool))
+
   # ── TS: Z-Score ────────────────────────────────────────────────────
   #   BRAIN: ts_zscore
 

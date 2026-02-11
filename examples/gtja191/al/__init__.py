@@ -36,7 +36,7 @@ def parse_args():
   return parser.parse_args()
 
 
-nofunc = set([30, 54, 127, 143, 165, 181, 183])
+nofunc = set([30])
 
 
 def main(args):

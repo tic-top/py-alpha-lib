@@ -29,7 +29,25 @@ class AlphaTransformer(Transformer):
   def start(self, expr):
     return expr
 
+  def SELF(self, token):
+    return "__SELF__"
+
   def ternary_expr(self, cond, true_case, false_case):
+    if false_case == '__SELF__' and '__SELF__' in true_case:
+      # Detect (operand * __SELF__) pattern — product() produces "(A * B)" format
+      if true_case.startswith('(') and true_case.endswith(' * __SELF__)'):
+        operand = true_case[1:-len(' * __SELF__)')]
+        return f"ctx.SCAN_MUL({operand}, {cond})"
+      elif true_case.startswith('(__SELF__ * ') and true_case.endswith(')'):
+        operand = true_case[len('(__SELF__ * '):-1]
+        return f"ctx.SCAN_MUL({operand}, {cond})"
+      # Detect (operand + __SELF__) pattern
+      elif true_case.startswith('(') and true_case.endswith(' + __SELF__)'):
+        operand = true_case[1:-len(' + __SELF__)')]
+        return f"ctx.SCAN_ADD({operand}, {cond})"
+      elif true_case.startswith('(__SELF__ + ') and true_case.endswith(')'):
+        operand = true_case[len('(__SELF__ + '):-1]
+        return f"ctx.SCAN_ADD({operand}, {cond})"
     return f"np.where({cond}, {true_case}, {false_case})"
 
   def logical_or_expr(self, left, *rights):

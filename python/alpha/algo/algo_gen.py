@@ -12,6 +12,12 @@ def _to_f64(a):
     return a
   return a.astype(np.float64)
 
+def _to_bool(a):
+  """Ensure array is bool. Zero-copy if already bool."""
+  if a.dtype == np.bool_:
+    return a
+  return a.astype(bool)
+
 def BARSLAST(
   input: np.ndarray | list[np.ndarray]
 ) -> np.ndarray | list[np.ndarray]:
@@ -555,6 +561,50 @@ def RLONGCROSS(
     _algo.rlongcross(r, a, b, n)
     return r
 
+def SCAN_ADD(
+  input: np.ndarray | list[np.ndarray], condition: np.ndarray | list[np.ndarray]
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Conditional cumulative add: r[t] = r[t-1] + (cond[t] ? input[t] : 0)
+  
+  Used for SELF-referencing alpha expressions with additive accumulation.
+  Serial within each stock, parallel across stocks via rayon.
+  """
+  if isinstance(input, list) and isinstance(condition, list):
+    input = [_to_f64(x) for x in input]
+    condition = [_to_bool(x) for x in condition]
+    r = [np.empty_like(x) for x in input]
+    _algo.scan_add(r, input, condition)
+    return r
+  else:
+    input = _to_f64(input)
+    condition = _to_bool(condition)
+    r = np.empty_like(input)
+    _algo.scan_add(r, input, condition)
+    return r
+
+def SCAN_MUL(
+  input: np.ndarray | list[np.ndarray], condition: np.ndarray | list[np.ndarray]
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Conditional cumulative multiply: r[t] = r[t-1] * (cond[t] ? input[t] : 1)
+  
+  Used for SELF-referencing alpha expressions like GTJA #143.
+  Serial within each stock, parallel across stocks via rayon.
+  """
+  if isinstance(input, list) and isinstance(condition, list):
+    input = [_to_f64(x) for x in input]
+    condition = [_to_bool(x) for x in condition]
+    r = [np.empty_like(x) for x in input]
+    _algo.scan_mul(r, input, condition)
+    return r
+  else:
+    input = _to_f64(input)
+    condition = _to_bool(condition)
+    r = np.empty_like(input)
+    _algo.scan_mul(r, input, condition)
+    return r
+
 def SLOPE(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
@@ -662,13 +712,13 @@ def SUMIF(
   """
   if isinstance(input, list) and isinstance(condition, list):
     input = [_to_f64(x) for x in input]
-    condition = [np.asarray(x, dtype=bool) for x in condition]
+    condition = [_to_bool(x) for x in condition]
     r = [np.empty_like(x) for x in input]
     _algo.sumif(r, input, condition, periods)
     return r
   else:
     input = _to_f64(input)
-    condition = np.asarray(condition, dtype=bool)
+    condition = _to_bool(condition)
     r = np.empty_like(input)
     _algo.sumif(r, input, condition, periods)
     return r
