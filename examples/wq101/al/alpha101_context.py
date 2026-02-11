@@ -25,6 +25,22 @@ class ExecContext:
       alpha.set_ctx(groups=securities)
 
     _cols = ["open", "high", "low", "close", "vol", "vwap"]
+    # Include optional columns if available in data
+    _has_indclass = False
+    _has_cap = False
+    try:
+      _ = data["indclass"]
+      _has_indclass = True
+      _cols.append("indclass")
+    except Exception:
+      pass
+    try:
+      _ = data["cap"]
+      _has_cap = True
+      _cols.append("cap")
+    except Exception:
+      pass
+
     if fill and securities > 0 and trades > 0:
       d = _fill_panel(data, securities, trades, _cols)
     else:
@@ -38,6 +54,14 @@ class ExecContext:
     self.RETURNS = returns(d["close"])
     self.VWAP = d["vwap"]
 
+    if _has_indclass:
+      indclass = d["indclass"]
+      self.INDCLASS_SUBINDUSTRY = indclass
+      self.INDCLASS_INDUSTRY = np.floor(indclass / 10000)
+      self.INDCLASS_SECTOR = np.floor(indclass / 1000000)
+    if _has_cap:
+      self.CAP = d["cap"].astype(np.float64)
+
   def __call__(self, name: str) -> np.ndarray:
     if name.startswith("ADV"):
       n = name[3:]
@@ -46,6 +70,8 @@ class ExecContext:
       else:
         w = int(n)
         return self.SMA(self.VOLUME, w)
+    if name.startswith("INDCLASS."):
+      return getattr(self, name.replace(".", "_"))
     return getattr(self, name)
 
   def SUM(self, a: np.ndarray, w: int) -> np.ndarray:
@@ -114,3 +140,6 @@ class ExecContext:
 
   def SIGN(self, a: np.ndarray) -> np.ndarray:
     return np.sign(a)
+
+  def INDNEUTRALIZE(self, value: np.ndarray, category: np.ndarray) -> np.ndarray:
+    return alpha.NEUTRALIZE(category, value)

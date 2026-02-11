@@ -121,6 +121,22 @@ class ExecContext:
 
     # Extract OHLCV arrays, filling incomplete panels with NaN
     _cols = ["open", "high", "low", "close", "vol", "vwap"]
+    # Include indclass if available in data
+    _has_indclass = False
+    _has_cap = False
+    try:
+      _ = data["indclass"]
+      _has_indclass = True
+      _cols.append("indclass")
+    except Exception:
+      pass
+    try:
+      _ = data["cap"]
+      _has_cap = True
+      _cols.append("cap")
+    except Exception:
+      pass
+
     if fill and securities > 0 and trades > 0:
       d = _fill_panel(data, securities, trades, _cols)
     else:
@@ -132,6 +148,14 @@ class ExecContext:
     self.CLOSE = d["close"]
     self.VOLUME = d["vol"].astype(np.float64)
     self.VWAP = d["vwap"]
+
+    if _has_indclass:
+      indclass = d["indclass"]
+      self.INDCLASS_SUBINDUSTRY = indclass
+      self.INDCLASS_INDUSTRY = np.floor(indclass / 10000)
+      self.INDCLASS_SECTOR = np.floor(indclass / 1000000)
+    if _has_cap:
+      self.CAP = d["cap"].astype(np.float64)
     self.RETURNS = _returns(self.CLOSE)
     self.RET = self.RETURNS
 
@@ -153,6 +177,8 @@ class ExecContext:
       if len(n) == 0:
         return self.VOLUME
       return alpha.MA(self.VOLUME, int(n))
+    if name.startswith("INDCLASS."):
+      return getattr(self, name.replace(".", "_"))
     if name == "AMOUNT" or name == "VOL":
       return self.VOLUME
     if name == "SEQUENCE":
@@ -434,6 +460,12 @@ class ExecContext:
 
   def SCALE(self, a: np.ndarray, k: int = 1) -> np.ndarray:
     return a * k / np.abs(a).sum()
+
+  # ── IndNeutralize ───────────────────────────────────────────────────
+  #   wq101: INDNEUTRALIZE(value, IndClass.xxx)
+
+  def INDNEUTRALIZE(self, value: np.ndarray, category: np.ndarray) -> np.ndarray:
+    return alpha.NEUTRALIZE(category, value)
 
   # ====================================================================
   #  Grouped Cross-Sectional Operators (GROUP_ prefix)

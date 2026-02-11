@@ -56,8 +56,9 @@ Rust 标准库 `Float::is_normal()` 对 `0.0` 和次正规数返回 `false`，�
 | decay_linear NaN 处理差异 | 3 |
 | 浮点精度 | 1 |
 | 数据不足 | 3 |
-| 未实现 | 22 |
-| **合计** | **99** (+ alpha_023/062 三方均缺失) |
+| IndNeutralize 因子（新增支持） | 19 |
+| 其他（alpha_023/062 pandas 缺失） | 2 |
+| **合计** | **101** (alpha-lib 全部支持) |
 
 ## 完全一致（47 个）
 
@@ -134,94 +135,123 @@ Pandas 在 LWMA 前做 `ffill().bfill().fillna(0)` 预处理，alpha-lib 正确�
 |---|---|---|---|---|---|
 | pandas | 75 | 2,643,373ms (44min) | 35,245ms | 673ms | 1x |
 | polars_ta | 81 | 58,130ms (58s) | 718ms | 424ms | **45x** |
-| **alpha-lib** | **82** | **2,912ms (2.9s)** | **36ms** | **33ms** | **908x** |
+| **alpha-lib** | **101** | **3,628ms (3.6s)** | **36ms** | **40ms** | **729x** |
 
 ### 逐因子对比（alpha-lib vs pandas）
 
 | Factor | alpha-lib | pandas | 加速比 |
 |---|---|---|---|
-| alpha_001 | 33ms | 32,240ms | 977x |
-| alpha_002 | 42ms | 685ms | 16x |
-| alpha_003 | 29ms | 539ms | 19x |
-| alpha_004 | 14ms | 92,428ms | 6,602x |
-| alpha_005 | 25ms | 169ms | 7x |
-| alpha_006 | 6ms | 422ms | 77x |
-| alpha_007 | 30ms | 75,444ms | 2,515x |
-| alpha_008 | 19ms | 305ms | 16x |
-| alpha_009 | 29ms | 127ms | 4x |
-| alpha_010 | 45ms | 210ms | 5x |
-| alpha_011 | 31ms | 237ms | 8x |
-| alpha_012 | 10ms | 17ms | 2x |
-| alpha_013 | 31ms | 669ms | 22x |
-| alpha_014 | 29ms | 501ms | 17x |
-| alpha_015 | 34ms | 673ms | 20x |
-| alpha_016 | 31ms | 562ms | 18x |
-| alpha_017 | 44ms | 177,560ms | 4,035x |
-| alpha_018 | 33ms | 556ms | 17x |
-| alpha_019 | 18ms | 103ms | 6x |
-| alpha_020 | 23ms | 273ms | 12x |
-| alpha_021 | 28ms | 406ms | 15x |
-| alpha_022 | 20ms | 695ms | 35x |
-| alpha_023 | 8ms | - | - |
-| alpha_024 | 19ms | 136ms | 7x |
-| alpha_025 | 12ms | 139ms | 12x |
-| alpha_026 | 31ms | 185,351ms | 5,979x |
-| alpha_027 | 35ms | 675ms | 19x |
-| alpha_028 | 24ms | 636ms | 27x |
-| alpha_029 | 47ms | 91,282ms | 1,942x |
-| alpha_030 | 20ms | 178ms | 9x |
-| alpha_031 | 61ms | 985ms | 16x |
-| alpha_032 | 32ms | 501ms | 16x |
-| alpha_033 | 16ms | 91ms | 6x |
-| alpha_034 | 28ms | 371ms | 13x |
-| alpha_035 | 38ms | 263,594ms | 6,937x |
-| alpha_036 | 92ms | 95,351ms | 1,037x |
-| alpha_037 | 26ms | 535ms | 21x |
-| alpha_038 | 24ms | 94,936ms | 3,956x |
-| alpha_039 | 28ms | 297ms | 11x |
-| alpha_040 | 20ms | 558ms | 28x |
-| alpha_041 | 14ms | 4ms | 0.3x |
-| alpha_042 | 13ms | 130ms | 10x |
-| alpha_043 | 24ms | 174,838ms | 7,285x |
-| alpha_044 | 18ms | 487ms | 27x |
-| alpha_045 | 47ms | 1,291ms | 27x |
-| alpha_046 | 24ms | 30ms | 1x |
-| alpha_047 | 35ms | 343ms | 10x |
-| alpha_049 | 9ms | 18ms | 2x |
-| alpha_050 | 31ms | 682ms | 22x |
-| alpha_051 | 14ms | 14ms | 1x |
-| alpha_052 | 23ms | 92,591ms | 4,026x |
-| alpha_053 | 8ms | 9ms | 1x |
-| alpha_054 | 10ms | 20ms | 2x |
-| alpha_055 | 35ms | 792ms | 23x |
-| alpha_057 | 21ms | 31,689ms | 1,509x |
-| alpha_060 | 22ms | 34,148ms | 1,552x |
-| alpha_061 | 29ms | 671ms | 23x |
-| alpha_064 | 62ms | 790ms | 13x |
-| alpha_065 | 41ms | 760ms | 19x |
-| alpha_066 | 29ms | 93,920ms | 3,239x |
-| alpha_068 | 66ms | 87,173ms | 1,321x |
-| alpha_071 | 63ms | - | - |
-| alpha_072 | 65ms | 192,850ms | 2,967x |
-| alpha_073 | 34ms | - | - |
-| alpha_074 | 55ms | 2,281ms | 41x |
-| alpha_075 | 49ms | 1,253ms | 26x |
-| alpha_077 | 36ms | - | - |
-| alpha_078 | 60ms | 1,359ms | 23x |
-| alpha_081 | 62ms | 28,633ms | 462x |
-| alpha_083 | 27ms | 352ms | 13x |
-| alpha_084 | 32ms | 90,065ms | 2,814x |
-| alpha_085 | 72ms | 194,698ms | 2,704x |
-| alpha_086 | 32ms | 76,954ms | 2,405x |
-| alpha_088 | 67ms | - | - |
-| alpha_094 | 51ms | 230,125ms | 4,512x |
-| alpha_095 | 42ms | 67,088ms | 1,597x |
-| alpha_096 | 63ms | - | - |
-| alpha_098 | 49ms | 112,529ms | 2,297x |
-| alpha_099 | 48ms | 3,126ms | 65x |
-| alpha_101 | 8ms | 297ms | 39x |
+| alpha_001 | 48ms | 32,240ms | 676x |
+| alpha_002 | 37ms | 685ms | 18x |
+| alpha_003 | 14ms | 539ms | 40x |
+| alpha_004 | 15ms | 92,428ms | 6,288x |
+| alpha_005 | 29ms | 169ms | 6x |
+| alpha_006 | 3ms | 422ms | 132x |
+| alpha_007 | 42ms | 75,444ms | 1,784x |
+| alpha_008 | 20ms | 305ms | 15x |
+| alpha_009 | 45ms | 127ms | 3x |
+| alpha_010 | 39ms | 210ms | 5x |
+| alpha_011 | 32ms | 237ms | 7x |
+| alpha_012 | 17ms | 17ms | 1x |
+| alpha_013 | 23ms | 669ms | 29x |
+| alpha_014 | 19ms | 501ms | 27x |
+| alpha_015 | 27ms | 673ms | 25x |
+| alpha_016 | 21ms | 562ms | 26x |
+| alpha_017 | 57ms | 177,560ms | 3,132x |
+| alpha_018 | 21ms | 556ms | 27x |
+| alpha_019 | 34ms | 103ms | 3x |
+| alpha_020 | 46ms | 273ms | 6x |
+| alpha_021 | 43ms | 406ms | 10x |
+| alpha_022 | 18ms | 695ms | 38x |
+| alpha_023 | 12ms | - | - |
+| alpha_024 | 54ms | 136ms | 3x |
+| alpha_025 | 18ms | 139ms | 8x |
+| alpha_026 | 23ms | 185,351ms | 8,238x |
+| alpha_027 | 29ms | 675ms | 23x |
+| alpha_028 | 15ms | 636ms | 44x |
+| alpha_029 | 62ms | 91,282ms | 1,484x |
+| alpha_030 | 46ms | 178ms | 4x |
+| alpha_031 | 58ms | 985ms | 17x |
+| alpha_032 | 15ms | 501ms | 33x |
+| alpha_033 | 12ms | 91ms | 7x |
+| alpha_034 | 41ms | 371ms | 9x |
+| alpha_035 | 55ms | 263,594ms | 4,767x |
+| alpha_036 | 85ms | 95,351ms | 1,120x |
+| alpha_037 | 19ms | 535ms | 28x |
+| alpha_038 | 21ms | 94,936ms | 4,436x |
+| alpha_039 | 49ms | 297ms | 6x |
+| alpha_040 | 11ms | 558ms | 51x |
+| alpha_041 | 4ms | 4ms | 1x |
+| alpha_042 | 11ms | 130ms | 12x |
+| alpha_043 | 30ms | 174,838ms | 5,828x |
+| alpha_044 | 9ms | 487ms | 52x |
+| alpha_045 | 31ms | 1,291ms | 42x |
+| alpha_046 | 31ms | 30ms | 1x |
+| alpha_047 | 38ms | 343ms | 9x |
+| alpha_048 | 41ms | - | - |
+| alpha_049 | 16ms | 18ms | 1x |
+| alpha_050 | 26ms | 682ms | 26x |
+| alpha_051 | 23ms | 14ms | 1x |
+| alpha_052 | 33ms | 92,591ms | 2,823x |
+| alpha_053 | 14ms | 9ms | 1x |
+| alpha_054 | 14ms | 20ms | 1x |
+| alpha_055 | 32ms | 792ms | 25x |
+| alpha_056 | 23ms | - | - |
+| alpha_057 | 15ms | 31,689ms | 2,185x |
+| alpha_058 | 20ms | - | - |
+| alpha_059 | 24ms | - | - |
+| alpha_060 | 40ms | 34,148ms | 852x |
+| alpha_061 | 21ms | 671ms | 33x |
+| alpha_062 | 43ms | 925ms | 21x |
+| alpha_063 | 59ms | - | - |
+| alpha_064 | 38ms | 790ms | 21x |
+| alpha_065 | 41ms | 760ms | 18x |
+| alpha_066 | 44ms | 93,920ms | 2,139x |
+| alpha_067 | 55ms | - | - |
+| alpha_068 | 42ms | 87,173ms | 2,061x |
+| alpha_069 | 48ms | - | - |
+| alpha_070 | 34ms | - | - |
+| alpha_071 | 46ms | - | - |
+| alpha_072 | 40ms | 192,850ms | 4,821x |
+| alpha_073 | 45ms | - | - |
+| alpha_074 | 43ms | 2,281ms | 53x |
+| alpha_075 | 37ms | 1,253ms | 34x |
+| alpha_076 | 49ms | - | - |
+| alpha_077 | 31ms | - | - |
+| alpha_078 | 40ms | 1,359ms | 34x |
+| alpha_079 | 49ms | - | - |
+| alpha_080 | 34ms | - | - |
+| alpha_081 | 58ms | 28,633ms | 495x |
+| alpha_082 | 47ms | - | - |
+| alpha_083 | 42ms | 352ms | 8x |
+| alpha_084 | 40ms | 90,065ms | 2,274x |
+| alpha_085 | 41ms | 194,698ms | 4,760x |
+| alpha_086 | 33ms | 76,954ms | 2,318x |
+| alpha_087 | 42ms | - | - |
+| alpha_088 | 74ms | - | - |
+| alpha_089 | 46ms | - | - |
+| alpha_090 | 50ms | - | - |
+| alpha_091 | 35ms | - | - |
+| alpha_092 | 54ms | - | - |
+| alpha_093 | 40ms | - | - |
+| alpha_094 | 50ms | 230,125ms | 4,612x |
+| alpha_095 | 45ms | 67,088ms | 1,494x |
+| alpha_096 | 61ms | - | - |
+| alpha_097 | 80ms | - | - |
+| alpha_098 | 55ms | 112,529ms | 2,046x |
+| alpha_099 | 40ms | 3,126ms | 78x |
+| alpha_100 | 100ms | - | - |
+| alpha_101 | 9ms | 297ms | 34x |
 
 含 `ts_rank` / `correlation` 长窗口操作的因子加速比 **1,000x - 7,000x**，简单因子 **2x - 100x**。
+
+### 新增 IndNeutralize 因子（19 个）
+
+以下因子使用 `INDNEUTRALIZE(expr, IndClass.xxx)` 行业中性化，此前未实现，现已全部支持：
+
+048, 056, 058, 059, 063, 067, 069, 070, 076, 079, 080, 082, 087, 089, 090, 091, 093, 097, 100
+
+这些因子的 pandas 参考实现也缺失（未支持行业分类数据），因此无法做正确性对比。
 
 ## Python 层 dtype 处理优化
 

@@ -36,9 +36,7 @@ def parse_args():
   return parser.parse_args()
 
 
-nofunc = set(
-  [48, 56, 58, 59, 63, 67, 69, 70, 76, 79, 80, 82, 87, 89, 90, 91, 93, 97, 100]
-)
+nofunc = set()
 
 
 def main(args):
