@@ -35,14 +35,14 @@ pub fn ta_ma<NumT: Float + Send + Sync>(
         let mut sum = NumT::zero();
         for i in iter {
           let val = x[i.end];
-          if val.is_normal() {
+          if is_normal(&val) {
             sum = sum + val;
           }
 
           // subtract values that fell out of the window
           for k in i.prev_start..i.start {
             let old = x[k];
-            if old.is_normal() {
+            if is_normal(&old) {
               sum = sum - old;
             }
           }
@@ -68,7 +68,7 @@ pub fn ta_ma<NumT: Float + Send + Sync>(
         // Pre-initialization for start > 0
         let pre_fill_start = if start >= periods { start - periods } else { 0 };
         for k in pre_fill_start..start {
-          if x[k].is_normal() {
+          if is_normal(&x[k]) {
             sum = sum + x[k];
           } else {
             nan_in_window += 1;
@@ -79,7 +79,7 @@ pub fn ta_ma<NumT: Float + Send + Sync>(
           let val = x[i];
 
           // Add new value
-          if val.is_normal() {
+          if is_normal(&val) {
             sum = sum + val;
           } else {
             nan_in_window += 1;
@@ -88,7 +88,7 @@ pub fn ta_ma<NumT: Float + Send + Sync>(
           // Remove old value
           if i >= periods {
             let old = x[i - periods];
-            if old.is_normal() {
+            if is_normal(&old) {
               sum = sum - old;
             } else {
               nan_in_window -= 1;

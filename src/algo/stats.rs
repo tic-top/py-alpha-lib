@@ -32,14 +32,14 @@ pub fn ta_var<NumT: Float + Send + Sync>(
 
         for i in iter {
           let val = x[i.end];
-          if val.is_normal() {
+          if is_normal(&val) {
             sum = sum + val;
             sum_sq = sum_sq + val * val;
           }
 
           for k in i.prev_start..i.start {
             let old = x[k];
-            if old.is_normal() {
+            if is_normal(&old) {
               sum = sum - old;
               sum_sq = sum_sq - old * old;
             }
@@ -82,7 +82,7 @@ pub fn ta_var<NumT: Float + Send + Sync>(
 
         for k in pre_fill_start..start {
           let val = x[k];
-          if val.is_normal() {
+          if is_normal(&val) {
             sum = sum + val;
             sum_sq = sum_sq + val * val;
           } else {
@@ -93,7 +93,7 @@ pub fn ta_var<NumT: Float + Send + Sync>(
         for i in start..x.len() {
           let val = x[i];
 
-          if val.is_normal() {
+          if is_normal(&val) {
             sum = sum + val;
             sum_sq = sum_sq + val * val;
           } else {
@@ -102,7 +102,7 @@ pub fn ta_var<NumT: Float + Send + Sync>(
 
           if i >= periods {
             let old = x[i - periods];
-            if old.is_normal() {
+            if is_normal(&old) {
               sum = sum - old;
               sum_sq = sum_sq - old * old;
             } else {
@@ -110,7 +110,7 @@ pub fn ta_var<NumT: Float + Send + Sync>(
             }
           }
 
-          if nan_in_window > 0 || !val.is_normal() {
+          if nan_in_window > 0 || !is_normal(&val) {
             // Result NaN
           } else {
             let output_idx = i;
@@ -181,7 +181,7 @@ pub fn ta_cov<NumT: Float + Send + Sync>(
         for i in start..r.len() {
           let val_x = x[i];
           let val_y = y[i];
-          let is_valid = val_x.is_normal() && val_y.is_normal();
+          let is_valid = is_normal(&val_x) && is_normal(&val_y);
 
           if is_valid {
             sum_x = sum_x + val_x;
@@ -193,7 +193,7 @@ pub fn ta_cov<NumT: Float + Send + Sync>(
           while no_nan_count > periods {
             let old_x = x[win_start];
             let old_y = y[win_start];
-            if old_x.is_normal() && old_y.is_normal() {
+            if is_normal(&old_x) && is_normal(&old_y) {
               sum_x = sum_x - old_x;
               sum_y = sum_y - old_y;
               sum_xy = sum_xy - old_x * old_y;
@@ -202,7 +202,7 @@ pub fn ta_cov<NumT: Float + Send + Sync>(
             win_start += 1;
           }
 
-          while win_start <= i && !(x[win_start].is_normal() && y[win_start].is_normal()) {
+          while win_start <= i && !(is_normal(&x[win_start]) && is_normal(&y[win_start])) {
             win_start += 1;
           }
 
@@ -240,7 +240,7 @@ pub fn ta_cov<NumT: Float + Send + Sync>(
         for k in pre_fill_start..start {
           let val_x = x[k];
           let val_y = y[k];
-          if val_x.is_normal() && val_y.is_normal() {
+          if is_normal(&val_x) && is_normal(&val_y) {
             sum_x = sum_x + val_x;
             sum_y = sum_y + val_y;
             sum_xy = sum_xy + val_x * val_y;
@@ -252,7 +252,7 @@ pub fn ta_cov<NumT: Float + Send + Sync>(
         for i in start..r.len() {
           let val_x = x[i];
           let val_y = y[i];
-          let is_valid = val_x.is_normal() && val_y.is_normal();
+          let is_valid = is_normal(&val_x) && is_normal(&val_y);
 
           if is_valid {
             sum_x = sum_x + val_x;
@@ -265,7 +265,7 @@ pub fn ta_cov<NumT: Float + Send + Sync>(
           if i >= periods {
             let old_x = x[i - periods];
             let old_y = y[i - periods];
-            if old_x.is_normal() && old_y.is_normal() {
+            if is_normal(&old_x) && is_normal(&old_y) {
               sum_x = sum_x - old_x;
               sum_y = sum_y - old_y;
               sum_xy = sum_xy - old_x * old_y;
@@ -336,7 +336,7 @@ pub fn ta_corr<NumT: Float + Send + Sync>(
         for i in start..r.len() {
           let val_x = x[i];
           let val_y = y[i];
-          let is_valid = val_x.is_normal() && val_y.is_normal();
+          let is_valid = is_normal(&val_x) && is_normal(&val_y);
 
           if is_valid {
             sum_x = sum_x + val_x;
@@ -350,7 +350,7 @@ pub fn ta_corr<NumT: Float + Send + Sync>(
           while no_nan_count > periods {
             let old_x = x[win_start];
             let old_y = y[win_start];
-            if old_x.is_normal() && old_y.is_normal() {
+            if is_normal(&old_x) && is_normal(&old_y) {
               sum_x = sum_x - old_x;
               sum_y = sum_y - old_y;
               sum_xy = sum_xy - old_x * old_y;
@@ -361,7 +361,7 @@ pub fn ta_corr<NumT: Float + Send + Sync>(
             win_start += 1;
           }
 
-          while win_start <= i && !(x[win_start].is_normal() && y[win_start].is_normal()) {
+          while win_start <= i && !(is_normal(&x[win_start]) && is_normal(&y[win_start])) {
             win_start += 1;
           }
 
@@ -417,7 +417,7 @@ pub fn ta_corr<NumT: Float + Send + Sync>(
         for k in pre_fill_start..start {
           let val_x = x[k];
           let val_y = y[k];
-          if val_x.is_normal() && val_y.is_normal() {
+          if is_normal(&val_x) && is_normal(&val_y) {
             sum_x = sum_x + val_x;
             sum_y = sum_y + val_y;
             sum_xy = sum_xy + val_x * val_y;
@@ -431,7 +431,7 @@ pub fn ta_corr<NumT: Float + Send + Sync>(
         for i in start..r.len() {
           let val_x = x[i];
           let val_y = y[i];
-          let is_valid = val_x.is_normal() && val_y.is_normal();
+          let is_valid = is_normal(&val_x) && is_normal(&val_y);
 
           if is_valid {
             sum_x = sum_x + val_x;
@@ -446,7 +446,7 @@ pub fn ta_corr<NumT: Float + Send + Sync>(
           if i >= periods {
             let old_x = x[i - periods];
             let old_y = y[i - periods];
-            if old_x.is_normal() && old_y.is_normal() {
+            if is_normal(&old_x) && is_normal(&old_y) {
               sum_x = sum_x - old_x;
               sum_y = sum_y - old_y;
               sum_xy = sum_xy - old_x * old_y;
@@ -534,7 +534,7 @@ pub fn ta_regbeta<NumT: Float + Send + Sync>(
         for i in start..r.len() {
           let val_x = x[i];
           let val_y = y[i];
-          let is_valid = val_x.is_normal() && val_y.is_normal();
+          let is_valid = is_normal(&val_x) && is_normal(&val_y);
 
           if is_valid {
             sum_x = sum_x + val_x;
@@ -547,7 +547,7 @@ pub fn ta_regbeta<NumT: Float + Send + Sync>(
           while no_nan_count > periods {
             let old_x = x[win_start];
             let old_y = y[win_start];
-            if old_x.is_normal() && old_y.is_normal() {
+            if is_normal(&old_x) && is_normal(&old_y) {
               sum_x = sum_x - old_x;
               sum_y = sum_y - old_y;
               sum_xy = sum_xy - old_x * old_y;
@@ -557,7 +557,7 @@ pub fn ta_regbeta<NumT: Float + Send + Sync>(
             win_start += 1;
           }
 
-          while win_start <= i && !(x[win_start].is_normal() && y[win_start].is_normal()) {
+          while win_start <= i && !(is_normal(&x[win_start]) && is_normal(&y[win_start])) {
             win_start += 1;
           }
 
@@ -596,7 +596,7 @@ pub fn ta_regbeta<NumT: Float + Send + Sync>(
         for k in pre_fill_start..start {
           let val_x = x[k];
           let val_y = y[k];
-          if val_x.is_normal() && val_y.is_normal() {
+          if is_normal(&val_x) && is_normal(&val_y) {
             sum_x = sum_x + val_x;
             sum_y = sum_y + val_y;
             sum_xy = sum_xy + val_x * val_y;
@@ -609,7 +609,7 @@ pub fn ta_regbeta<NumT: Float + Send + Sync>(
         for i in start..r.len() {
           let val_x = x[i];
           let val_y = y[i];
-          let is_valid = val_x.is_normal() && val_y.is_normal();
+          let is_valid = is_normal(&val_x) && is_normal(&val_y);
 
           if is_valid {
             sum_x = sum_x + val_x;
@@ -623,7 +623,7 @@ pub fn ta_regbeta<NumT: Float + Send + Sync>(
           if i >= periods {
             let old_x = x[i - periods];
             let old_y = y[i - periods];
-            if old_x.is_normal() && old_y.is_normal() {
+            if is_normal(&old_x) && is_normal(&old_y) {
               sum_x = sum_x - old_x;
               sum_y = sum_y - old_y;
               sum_xy = sum_xy - old_x * old_y;
@@ -696,7 +696,7 @@ pub fn ta_regresi<NumT: Float + Send + Sync>(
         for i in start..r.len() {
           let val_x = x[i];
           let val_y = y[i];
-          let is_valid = val_x.is_normal() && val_y.is_normal();
+          let is_valid = is_normal(&val_x) && is_normal(&val_y);
 
           if is_valid {
             sum_x = sum_x + val_x;
@@ -709,7 +709,7 @@ pub fn ta_regresi<NumT: Float + Send + Sync>(
           while no_nan_count > periods {
             let old_x = x[win_start];
             let old_y = y[win_start];
-            if old_x.is_normal() && old_y.is_normal() {
+            if is_normal(&old_x) && is_normal(&old_y) {
               sum_x = sum_x - old_x;
               sum_y = sum_y - old_y;
               sum_xy = sum_xy - old_x * old_y;
@@ -719,7 +719,7 @@ pub fn ta_regresi<NumT: Float + Send + Sync>(
             win_start += 1;
           }
 
-          while win_start <= i && !(x[win_start].is_normal() && y[win_start].is_normal()) {
+          while win_start <= i && !(is_normal(&x[win_start]) && is_normal(&y[win_start])) {
             win_start += 1;
           }
 
@@ -762,7 +762,7 @@ pub fn ta_regresi<NumT: Float + Send + Sync>(
         for k in pre_fill_start..start {
           let val_x = x[k];
           let val_y = y[k];
-          if val_x.is_normal() && val_y.is_normal() {
+          if is_normal(&val_x) && is_normal(&val_y) {
             sum_x = sum_x + val_x;
             sum_y = sum_y + val_y;
             sum_xy = sum_xy + val_x * val_y;
@@ -775,7 +775,7 @@ pub fn ta_regresi<NumT: Float + Send + Sync>(
         for i in start..r.len() {
           let val_x = x[i];
           let val_y = y[i];
-          let is_valid = val_x.is_normal() && val_y.is_normal();
+          let is_valid = is_normal(&val_x) && is_normal(&val_y);
 
           if is_valid {
             sum_x = sum_x + val_x;
@@ -789,7 +789,7 @@ pub fn ta_regresi<NumT: Float + Send + Sync>(
           if i >= periods {
             let old_x = x[i - periods];
             let old_y = y[i - periods];
-            if old_x.is_normal() && old_y.is_normal() {
+            if is_normal(&old_x) && is_normal(&old_y) {
               sum_x = sum_x - old_x;
               sum_y = sum_y - old_y;
               sum_xy = sum_xy - old_x * old_y;

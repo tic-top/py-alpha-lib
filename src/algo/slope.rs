@@ -42,7 +42,7 @@ where
         for i in iter {
           for k in i.prev_start..i.start {
             let old = x[k];
-            if old.is_normal() {
+            if is_normal(&old) {
                sum_xy_1based = sum_xy_1based - sum_y;
                sum_y = sum_y - old;
                sum_y2 = sum_y2 - old * old;
@@ -51,7 +51,7 @@ where
           }
           
           let val = x[i.end];
-          if val.is_normal() {
+          if is_normal(&val) {
             count += 1;
             let n_t = NumT::from(count).unwrap();
             sum_y = sum_y + val;
@@ -90,7 +90,7 @@ where
         let pre_fill_start = if start >= periods { start - periods } else { 0 };
         for k in pre_fill_start..start {
              let val = x[k];
-             if val.is_normal() {
+             if is_normal(&val) {
                  count += 1;
                  let n_t = NumT::from(count).unwrap();
                  sum_y = sum_y + val;
@@ -112,7 +112,7 @@ where
            count += 1;
            let n_t = NumT::from(count).unwrap();
            
-           if c.is_normal() {
+           if is_normal(c) {
                sum_y = sum_y + *c;
                sum_y2 = sum_y2 + *c * *c;
                sum_xy_1based = sum_xy_1based + n_t * *c;
@@ -125,7 +125,7 @@ where
               let old = x[old_idx];
               
               sum_xy_1based = sum_xy_1based - sum_y;
-              if old.is_normal() {
+              if is_normal(&old) {
                  sum_y = sum_y - old;
                  sum_y2 = sum_y2 - old * old;
               } else {
