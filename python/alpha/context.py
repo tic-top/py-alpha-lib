@@ -24,12 +24,64 @@ Usage:
   # alpha.set_ctx(groups=...) called automatically
 """
 
+import logging
 import numpy as np
 import alpha
+
+logger = logging.getLogger(__name__)
 
 
 def _returns(a: np.ndarray) -> np.ndarray:
   return a / alpha.REF(a, 1) - 1
+
+
+def _extract_cols(data, cols):
+  """Extract columns as numpy arrays (polars or pandas)."""
+  out = {}
+  for c in cols:
+    out[c] = data[c].to_numpy()
+  return out
+
+
+def _fill_panel(data, securities, trades, cols):
+  """Extract columns, padding incomplete panels with NaN via numpy scatter.
+
+  Returns a dict {col_name: np.ndarray} of length securities*trades.
+  Zero-copy when the panel is already complete.
+  """
+  expected = securities * trades
+  actual = len(data)
+  if actual == expected:
+    return _extract_cols(data, cols)
+
+  # Build flat index: row i → security_idx * trades + trade_idx
+  # Use the DataFrame engine for fast categorical mapping, then numpy
+  try:
+    flat_idx = (
+      data.select(
+        (data["securityid"].rank("dense") - 1).cast(int) * trades
+        + (data["tradetime"].rank("dense") - 1).cast(int)
+      ).to_series().to_numpy()
+    )
+  except Exception:
+    import pandas as pd
+    sid = data["securityid"]
+    tid = data["tradetime"]
+    flat_idx = (
+      sid.astype("category").cat.codes.values * trades
+      + tid.astype("category").cat.codes.values
+    )
+
+  out = {}
+  for c in cols:
+    target = np.full(expected, np.nan, dtype=np.float64)
+    target[flat_idx] = data[c].to_numpy()
+    out[c] = target
+
+  n_missing = expected - actual
+  logger.warning("Filled %d missing rows to complete %d×%d panel",
+                  n_missing, securities, trades)
+  return out
 
 
 class ExecContext:
@@ -45,11 +97,13 @@ class ExecContext:
 
   Args:
     data: DataFrame (polars or pandas) with columns: open, high, low, close, vol, vwap
-    securities: Number of securities (stocks). Required for derived fields.
-    trades: Number of trading days. Required for derived fields.
+    securities: Number of securities (stocks). Auto-inferred if 0.
+    trades: Number of trading days. Auto-inferred if 0.
+    fill: If True (default), pad missing rows with NaN to complete the panel.
   """
 
-  def __init__(self, data, securities: int = 0, trades: int = 0):
+  def __init__(self, data, securities: int = 0, trades: int = 0,
+               fill: bool = True):
     # Auto-infer securities and trades from data columns
     if securities == 0 and trades == 0:
       try:
@@ -65,12 +119,19 @@ class ExecContext:
     if securities > 0:
       alpha.set_ctx(groups=securities)
 
-    self.OPEN = data["open"].to_numpy()
-    self.HIGH = data["high"].to_numpy()
-    self.LOW = data["low"].to_numpy()
-    self.CLOSE = data["close"].to_numpy()
-    self.VOLUME = data["vol"].to_numpy().astype(np.float64)
-    self.VWAP = data["vwap"].to_numpy()
+    # Extract OHLCV arrays, filling incomplete panels with NaN
+    _cols = ["open", "high", "low", "close", "vol", "vwap"]
+    if fill and securities > 0 and trades > 0:
+      d = _fill_panel(data, securities, trades, _cols)
+    else:
+      d = _extract_cols(data, _cols)
+
+    self.OPEN = d["open"]
+    self.HIGH = d["high"]
+    self.LOW = d["low"]
+    self.CLOSE = d["close"]
+    self.VOLUME = d["vol"].astype(np.float64)
+    self.VWAP = d["vwap"]
     self.RETURNS = _returns(self.CLOSE)
     self.RET = self.RETURNS
 

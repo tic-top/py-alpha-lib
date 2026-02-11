@@ -1,5 +1,6 @@
 import numpy as np
 import alpha
+from alpha.context import _fill_panel, _extract_cols
 
 
 def returns(a: np.ndarray):
@@ -7,25 +8,35 @@ def returns(a: np.ndarray):
 
 
 class ExecContext:
-  def __init__(self, data):
+  def __init__(self, data, fill: bool = True):
     # Auto-infer groups from data
+    securities = 0
+    trades = 0
     try:
       securities = data["securityid"].n_unique()
+      trades = data["tradetime"].n_unique()
     except Exception:
       try:
         securities = data["securityid"].nunique()
+        trades = data["tradetime"].nunique()
       except Exception:
-        securities = 0
+        pass
     if securities > 0:
       alpha.set_ctx(groups=securities)
 
-    self.OPEN = data["open"].to_numpy()
-    self.HIGH = data["high"].to_numpy()
-    self.LOW = data["low"].to_numpy()
-    self.CLOSE = data["close"].to_numpy()
-    self.VOLUME = data["vol"].to_numpy().astype(np.float64)
-    self.RETURNS = returns(data["close"].to_numpy())
-    self.VWAP = data["vwap"].to_numpy()
+    _cols = ["open", "high", "low", "close", "vol", "vwap"]
+    if fill and securities > 0 and trades > 0:
+      d = _fill_panel(data, securities, trades, _cols)
+    else:
+      d = _extract_cols(data, _cols)
+
+    self.OPEN = d["open"]
+    self.HIGH = d["high"]
+    self.LOW = d["low"]
+    self.CLOSE = d["close"]
+    self.VOLUME = d["vol"].astype(np.float64)
+    self.RETURNS = returns(d["close"])
+    self.VWAP = d["vwap"]
 
   def __call__(self, name: str) -> np.ndarray:
     if name.startswith("ADV"):
