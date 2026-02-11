@@ -70,7 +70,7 @@ class ExecContext:
     return a * k / sum
 
   def RANK(self, a: np.ndarray) -> np.ndarray:
-    return alpha.RANK(a)
+    return alpha.RANK(np.asarray(a, dtype=np.float64))
 
   def TS_ARGMAX(self, a: np.ndarray, w: int) -> np.ndarray:
     return w - alpha.HHVBARS(a, int(w))
@@ -79,7 +79,7 @@ class ExecContext:
     return w - alpha.LLVBARS(a, int(w))
 
   def DECAY_LINEAR(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.LWMA(a, int(w))
+    return alpha.LWMA(np.asarray(a, dtype=np.float64), int(w))
 
   def SIGNEDPOWER(self, a: np.ndarray, p: float | np.ndarray) -> np.ndarray:
     return np.sign(a) * np.power(np.abs(a), p)

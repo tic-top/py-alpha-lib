@@ -12,7 +12,7 @@ Benchmarked on Alpha 101, 4000 stocks x 261 trading days (1,044,000 data points 
 |---|---|---|---|---|---|
 | pandas | 75 | 31.2s | 2,643s | 2,675s (44min) | 1x |
 | polars_ta | 81 | 0.3s | 58s | 58s | 46x |
-| **alpha-lib** | **80** | **0.2s** | **2.6s** | **2.8s** | **940x** |
+| **alpha-lib** | **82** | **0.2s** | **2.9s** | **3.2s** | **847x** |
 
 See [COMPARISON.md](COMPARISON.md) for per-factor timing and correctness analysis.
 

@@ -186,7 +186,7 @@ class ExecContext:
   # ── Rank ───────────────────────────────────────────────────────────
 
   def RANK(self, a: np.ndarray) -> np.ndarray:
-    return alpha.RANK(a)
+    return alpha.RANK(np.asarray(a, dtype=np.float64))
 
   def TSRANK(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.TS_RANK(a, int(w))
@@ -211,13 +211,13 @@ class ExecContext:
   # ── Weighted averages ──────────────────────────────────────────────
 
   def DECAY_LINEAR(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.LWMA(a, int(w))
+    return alpha.LWMA(np.asarray(a, dtype=np.float64), int(w))
 
   def DECAYLINEAR(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.LWMA(a, int(w))
+    return alpha.LWMA(np.asarray(a, dtype=np.float64), int(w))
 
   def WMA(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.LWMA(a, int(w))
+    return alpha.LWMA(np.asarray(a, dtype=np.float64), int(w))
 
   # ── Products ───────────────────────────────────────────────────────
 
