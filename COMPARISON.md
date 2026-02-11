@@ -4,13 +4,45 @@
 
 ## 修复记录
 
-| 修复项 | 影响 |
-|---|---|
-| 转译器运算符优先级 | 27 → 41 |
-| 浮点窗口取整 + SIGNEDPOWER 语义 | 41 → 43 |
-| RANK 跨截面 NaN 处理 | 43 → 44 |
-| TS_RANK 重复值处理（BTreeMap→计数） | 44 → 47 |
-| Float::is_normal() 替换为自定义 is_normal() | 正确性修复，0.0 不再被误判为无效值 |
+对比测试过程中发现并修复的 bug。这些都是算法 / 代码生成层面的错误，无法通过 `FLAG_SKIP_NAN` 或 `FLAG_STRICTLY_CYCLE` 等运行时参数规避。
+
+| # | Commit | 修复项 | 一致因子数 | 根因 |
+|---|---|---|---|---|
+| 1 | `7013001` | 转译器运算符优先级 + 浮点窗口取整 | 27 → 41 | 代码生成 bug |
+| 2 | `9cf9fef` | SIGNEDPOWER 语义 | 41 → 43 | 数学定义错误 |
+| 3 | `bd428a3` | RANK 跨截面 NaN 处理 | 43 → 44 | 截面算法 bug |
+| 4 | `f8729bf` | TS_RANK 重复值处理 | 44 → 47 | 数据结构 bug |
+| 5 | `def3ddd` | Float::is_normal() 替换 | — | 正确性 bug |
+
+### 1. 转译器运算符优先级 + 浮点窗口取整
+
+**转译器生成的 Python 代码缺少括号**，导致表达式语义错误。例如 `(close - open) / open` 被生成为 `close - open / open`（先算 `open / open`）。同时，DSL 中的浮点窗口参数（如 `correlation(x, y, 8.93345)`）未取整，传入 Rust 后截断为 8 而非四舍五入到 9。
+
+修复：在 `to_python.py` 的 `sum`/`product`/比较运算生成时加括号；`arguments()` 方法对浮点参数四舍五入。
+
+### 2. SIGNEDPOWER 语义
+
+`SIGNEDPOWER(x, p)` 定义为 `sign(x) * |x|^p`，但 wq101 的 context 实现为 `np.power(x, p)`。当 `x < 0` 且 `p` 为非整数时，`np.power` 返回 NaN。
+
+修复：`alpha101_context.py` 中改为 `np.sign(a) * np.power(np.abs(a), p)`。
+
+### 3. RANK 跨截面 NaN 处理
+
+`ta_rank` 将 NaN 纳入排名分母计算，导致排名百分比偏低。pandas 的 `rank(pct=True)` 默认跳过 NaN。注意：这是截面操作，`FLAG_SKIP_NAN` 仅控制滚动窗口行为，不影响截面算子。
+
+修复：`rank.rs` 中 NaN 输入产生 NaN 输出，排名分母只计有效值。
+
+### 4. TS_RANK 重复值处理
+
+`ta_ts_rank` 使用 `BTreeMap<OrderedFloat, usize>` 作为滑动窗口，**相同浮点值会覆盖之前的条目**，导致窗口大小错误和排名计算偏差。
+
+修复：改用 `BTreeMap<OrderedFloat, u32>` 计数器 + 独立 NaN 计数，采用 min-rank 方法（与 pandas `rankdata(method='min')` 一致）。
+
+### 5. Float::is_normal() 替换
+
+Rust 标准库 `Float::is_normal()` 对 `0.0` 和次正规数返回 `false`，导致 MA / STDDEV / CORR / COV / LWMA 等算子将 `0.0` 误判为无效值并跳过。
+
+修复：定义 `fn is_normal(a) -> bool { !a.is_nan() }`，替换所有 `is_normal()` 调用。影响 5 个 Rust 源文件（ma.rs, stddev.rs, stats.rs, ema.rs, slope.rs）。
 
 ## 总览
 
