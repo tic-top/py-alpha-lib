@@ -608,6 +608,9 @@ def TS_RANK(
 ) -> np.ndarray | list[np.ndarray]:
   """
   Calculate rank in a sliding window with size `periods`
+  
+  Uses min-rank method for ties (same as pandas rankdata method='min').
+  NaN values are treated as larger than all non-NaN values.
   """
   if isinstance(input, list):
     r = [np.empty_like(x) for x in input]

@@ -50,6 +50,9 @@ impl<NumT: Float + Debug> Debug for OrderedFloat<NumT> {
 }
 
 /// Calculate rank in a sliding window with size `periods`
+///
+/// Uses min-rank method for ties (same as pandas rankdata method='min').
+/// NaN values are treated as larger than all non-NaN values.
 pub fn ta_ts_rank<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [NumT],
@@ -70,25 +73,60 @@ pub fn ta_ts_rank<NumT: Float + Send + Sync>(
     .for_each(|(r, x)| {
       let start = ctx.start(r.len());
       r.fill(NumT::nan());
-      let mut rank_window: BTreeMap<OrderedFloat<NumT>, usize> = BTreeMap::new();
+      // Track counts per unique value to handle duplicates correctly.
+      let mut rank_window: BTreeMap<OrderedFloat<NumT>, u32> = BTreeMap::new();
+      let mut nan_count: usize = 0;
+      let mut window_size: usize = 0;
+
       for i in start..x.len() {
-        let val = x[i].into();
-        if rank_window.len() < periods {
-          rank_window.insert(val, i);
+        let val = x[i];
+
+        // Add current value to window
+        if val.is_nan() {
+          nan_count += 1;
         } else {
-          rank_window.remove(&x[i - periods].into());
-          rank_window.insert(val, i);
+          *rank_window.entry(val.into()).or_insert(0) += 1;
+        }
+        window_size += 1;
+
+        // Remove oldest value if window exceeds periods
+        if window_size > periods {
+          let old_val = x[i - periods];
+          if old_val.is_nan() {
+            nan_count -= 1;
+          } else {
+            let old_key: OrderedFloat<NumT> = old_val.into();
+            if let Some(count) = rank_window.get_mut(&old_key) {
+              *count -= 1;
+              if *count == 0 {
+                rank_window.remove(&old_key);
+              }
+            }
+          }
+          window_size -= 1;
         }
 
-        let rank = rank_window
-          .iter()
-          .position(|v| val.eq(v.0))
-          .unwrap_or(rank_window.len() - 1)
-          + 1;
-        if ctx.is_strictly_cycle() && rank_window.len() < periods {
+        if ctx.is_strictly_cycle() && window_size < periods {
           continue;
         }
-        r[i] = NumT::from(rank).unwrap();
+
+        // Calculate rank
+        if val.is_nan() {
+          // NaN gets the highest rank in the window
+          r[i] = NumT::from(window_size).unwrap();
+        } else {
+          // Count all values strictly less than current (NaN treated as smallest)
+          let val_key: OrderedFloat<NumT> = val.into();
+          let mut less_count: usize = nan_count;
+          for (key, count) in rank_window.iter() {
+            if *key < val_key {
+              less_count += *count as usize;
+            } else {
+              break;
+            }
+          }
+          r[i] = NumT::from(less_count + 1).unwrap();
+        }
       }
     });
 
@@ -363,6 +401,37 @@ mod tests {
     // Position 2: [1, NaN, 3] -> 3 rank 3
     // Position 3: [NaN, 3, 4] -> 4 rank 3
     assert_vec_eq_nan(&r, &vec![1.0, 2.0, 3.0, 3.0]);
+  }
+
+  #[test]
+  fn test_ta_ts_rank_duplicates() {
+    // Test that duplicate values in the window are handled correctly.
+    // The old BTreeMap<key, index> approach would lose duplicates.
+    let input = vec![1.0, 1.0, 2.0];
+    let mut r = vec![0.0; input.len()];
+    let ctx = Context::new(0, 0, 0);
+
+    ta_ts_rank(&ctx, &mut r, &input, 3).unwrap();
+    // Position 0: [1] -> rank of 1 is 1
+    // Position 1: [1, 1] -> rank of 1 is 1 (min rank for ties)
+    // Position 2: [1, 1, 2] -> rank of 2 is 3 (two 1s below it)
+    assert_vec_eq_nan(&r, &vec![1.0, 1.0, 3.0]);
+  }
+
+  #[test]
+  fn test_ta_ts_rank_duplicates_sliding() {
+    // Verify correct sliding window behavior when duplicates enter and leave.
+    let input = vec![3.0, 1.0, 2.0, 1.0, 3.0];
+    let mut r = vec![0.0; input.len()];
+    let ctx = Context::new(0, 0, 0);
+
+    ta_ts_rank(&ctx, &mut r, &input, 3).unwrap();
+    // Position 0: [3] -> rank 1
+    // Position 1: [3, 1] -> rank of 1 is 1
+    // Position 2: [3, 1, 2] -> rank of 2 is 2
+    // Position 3: [1, 2, 1] -> rank of 1 is 1 (min rank, two 1s and one 2)
+    // Position 4: [2, 1, 3] -> rank of 3 is 3
+    assert_vec_eq_nan(&r, &vec![1.0, 1.0, 2.0, 1.0, 3.0]);
   }
 
   #[test]
