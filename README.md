@@ -128,6 +128,68 @@ examples/wq101/main.py --with-pd --with-al -s 1 -e 15
 
 Benchmark scripts in [`benchmarks/`](benchmarks/).
 
+## Using in Your Project
+
+### Install from PyPI
+
+```bash
+pip install py-alpha-lib
+```
+
+Or add to `requirements.txt`:
+
+```
+py-alpha-lib>=0.1.2
+```
+
+### Install from Source (GitHub)
+
+```bash
+pip install git+https://github.com/msd-rs/py-alpha-lib.git
+```
+
+Or in `requirements.txt`:
+
+```
+py-alpha-lib @ git+https://github.com/msd-rs/py-alpha-lib.git
+```
+
+Pin to a specific commit:
+
+```
+py-alpha-lib @ git+https://github.com/msd-rs/py-alpha-lib.git@main
+```
+
+> Requires Rust toolchain installed — `pip` will invoke `maturin` to compile the Rust extension automatically.
+
+### Plug and Play
+
+```python
+import alpha
+import numpy as np
+
+# 1. Load your data as numpy arrays (one per field)
+close = df["close"].to_numpy()
+volume = df["vol"].to_numpy().astype(np.float64)
+
+# 2. Configure context
+alpha.set_ctx(
+    groups=num_securities,     # number of stocks
+    flags=alpha.FLAG_SKIP_NAN  # optional: skip NaN in rolling windows
+)
+
+# 3. Call operators directly
+ma20 = alpha.MA(close, 20)
+std20 = alpha.STDDEV(close, 20)
+rank = alpha.RANK(close)  # cross-sectional rank (requires groups)
+corr = alpha.CORR(close, volume, 10)
+
+# 4. Or use the transpiler for factor expressions
+#    python -m alpha.lang your_factors.txt > factors.py
+```
+
+Data layout: flat 1D array `[stock1_day1, stock1_day2, ..., stockN_dayM]`, sorted by security then time. The `groups` parameter tells the library where each stock's data begins.
+
 ## Development
 
 Requirements:
