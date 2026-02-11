@@ -45,28 +45,30 @@ class AlphaTransformer(Transformer):
     return result
 
   def eq(self, left, right):
-    return f"{left} == {right}"
+    return f"({left} == {right})"
 
   def ne(self, left, right):
-    return f"{left} != {right}"
+    return f"({left} != {right})"
 
   def lt(self, left, right):
-    return f"{left} < {right}"
+    return f"({left} < {right})"
 
   def gt(self, left, right):
-    return f"{left} > {right}"
+    return f"({left} > {right})"
 
   def le(self, left, right):
-    return f"{left} <= {right}"
+    return f"({left} <= {right})"
 
   def ge(self, left, right):
-    return f"{left} >= {right}"
+    return f"({left} >= {right})"
 
   def sum(self, first, *rest):
     result = first
     it = iter(rest)
     for op, val in zip(it, it):
       result = f"{result} {op} {val}"
+    if rest:
+      result = f"({result})"
     return result
 
   def product(self, first, *rest):
@@ -74,6 +76,8 @@ class AlphaTransformer(Transformer):
     it = iter(rest)
     for op, val in zip(it, it):
       result = f"{result} {op} {val}"
+    if rest:
+      result = f"({result})"
     return result
 
   def power(self, base, *rest):
@@ -93,7 +97,16 @@ class AlphaTransformer(Transformer):
     return f"ctx.{name}({args})"
 
   def arguments(self, *args):
-    return ", ".join(args)
+    rounded = []
+    for arg in args:
+      try:
+        val = float(arg)
+        if '.' in arg and val == val:
+          arg = str(round(val))
+      except (ValueError, TypeError):
+        pass
+      rounded.append(arg)
+    return ", ".join(rounded)
 
   def NAME(self, name):
     name = str(name)
