@@ -6,6 +6,12 @@
 import numpy as np
 from . import _algo
 
+def _to_f64(a):
+  """Ensure array is float64. Zero-copy if already float64."""
+  if a.dtype == np.float64:
+    return a
+  return a.astype(np.float64)
+
 def BARSLAST(
   input: np.ndarray | list[np.ndarray]
 ) -> np.ndarray | list[np.ndarray]:
@@ -54,10 +60,12 @@ def BINS(
   Same value are assigned to the same bin.
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.bins(r, input, bins)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.bins(r, input, bins)
     return r
@@ -71,15 +79,15 @@ def CORR(
   Correlation = Cov(X, Y) / (StdDev(X) * StdDev(Y))
   """
   if isinstance(x, list) and isinstance(y, list):
+    x = [_to_f64(x) for x in x]
+    y = [_to_f64(x) for x in y]
     r = [np.empty_like(x) for x in x]
-    x = [x.astype(float) for x in x]
-    y = [x.astype(float) for x in y]
     _algo.corr(r, x, y, periods)
     return r
   else:
+    x = _to_f64(x)
+    y = _to_f64(y)
     r = np.empty_like(x)
-    x = x.astype(float)
-    y = y.astype(float)
     _algo.corr(r, x, y, periods)
     return r
 
@@ -111,15 +119,15 @@ def COV(
   Covariance = (SumXY - (SumX * SumY) / N) / (N - 1)
   """
   if isinstance(x, list) and isinstance(y, list):
+    x = [_to_f64(x) for x in x]
+    y = [_to_f64(x) for x in y]
     r = [np.empty_like(x) for x in x]
-    x = [x.astype(float) for x in x]
-    y = [x.astype(float) for x in y]
     _algo.cov(r, x, y, periods)
     return r
   else:
+    x = _to_f64(x)
+    y = _to_f64(y)
     r = np.empty_like(x)
-    x = x.astype(float)
-    y = y.astype(float)
     _algo.cov(r, x, y, periods)
     return r
 
@@ -131,15 +139,15 @@ def CROSS(
   alias: golden_cross, cross_ge
   """
   if isinstance(a, list) and isinstance(b, list):
+    a = [_to_f64(x) for x in a]
+    b = [_to_f64(x) for x in b]
     r = [np.empty_like(x, dtype=bool) for x in a]
-    a = [x.astype(float) for x in a]
-    b = [x.astype(float) for x in b]
     _algo.cross(r, a, b)
     return r
   else:
+    a = _to_f64(a)
+    b = _to_f64(b)
     r = np.empty_like(a, dtype=bool)
-    a = a.astype(float)
-    b = b.astype(float)
     _algo.cross(r, a, b)
     return r
 
@@ -153,10 +161,12 @@ def DMA(
   Ref: https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.dma(r, input, weight)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.dma(r, input, weight)
     return r
@@ -174,17 +184,17 @@ def FRET(
   If `is_calc[t+delay]` is 0, returns NaN.
   """
   if isinstance(open, list) and isinstance(close, list) and isinstance(is_calc, list):
+    open = [_to_f64(x) for x in open]
+    close = [_to_f64(x) for x in close]
+    is_calc = [_to_f64(x) for x in is_calc]
     r = [np.empty_like(x) for x in open]
-    open = [x.astype(float) for x in open]
-    close = [x.astype(float) for x in close]
-    is_calc = [x.astype(float) for x in is_calc]
     _algo.fret(r, open, close, is_calc, delay, periods)
     return r
   else:
+    open = _to_f64(open)
+    close = _to_f64(close)
+    is_calc = _to_f64(is_calc)
     r = np.empty_like(open)
-    open = open.astype(float)
-    close = close.astype(float)
-    is_calc = is_calc.astype(float)
     _algo.fret(r, open, close, is_calc, delay, periods)
     return r
 
@@ -199,15 +209,15 @@ def GROUP_RANK(
   NaN in category or input produces NaN output.
   """
   if isinstance(category, list) and isinstance(input, list):
+    category = [_to_f64(x) for x in category]
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in category]
-    category = [x.astype(float) for x in category]
-    input = [x.astype(float) for x in input]
     _algo.group_rank(r, category, input)
     return r
   else:
+    category = _to_f64(category)
+    input = _to_f64(input)
     r = np.empty_like(category)
-    category = category.astype(float)
-    input = input.astype(float)
     _algo.group_rank(r, category, input)
     return r
 
@@ -223,15 +233,15 @@ def GROUP_ZSCORE(
   Groups with fewer than 2 valid values produce NaN.
   """
   if isinstance(category, list) and isinstance(input, list):
+    category = [_to_f64(x) for x in category]
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in category]
-    category = [x.astype(float) for x in category]
-    input = [x.astype(float) for x in input]
     _algo.group_zscore(r, category, input)
     return r
   else:
+    category = _to_f64(category)
+    input = _to_f64(input)
     r = np.empty_like(category)
-    category = category.astype(float)
-    input = input.astype(float)
     _algo.group_zscore(r, category, input)
     return r
 
@@ -244,10 +254,12 @@ def HHV(
   Ref: https://www.amibroker.com/guide/afl/hhv.html
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.hhv(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.hhv(r, input, periods)
     return r
@@ -261,10 +273,12 @@ def HHVBARS(
   Ref: https://www.amibroker.com/guide/afl/hhvbars.html
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.hhvbars(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.hhvbars(r, input, periods)
     return r
@@ -278,10 +292,12 @@ def INTERCEPT(
   Calculates the intercept of the linear regression line for a moving window.
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.intercept(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.intercept(r, input, periods)
     return r
@@ -295,10 +311,12 @@ def LLV(
   Ref: https://www.amibroker.com/guide/afl/llv.html
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.llv(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.llv(r, input, periods)
     return r
@@ -312,10 +330,12 @@ def LLVBARS(
   Ref: https://www.amibroker.com/guide/afl/llvbars.html
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.llvbars(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.llvbars(r, input, periods)
     return r
@@ -327,15 +347,15 @@ def LONGCROSS(
   For 2 arrays A and B, return true if previous N periods A < B, Current A >= B
   """
   if isinstance(a, list) and isinstance(b, list):
+    a = [_to_f64(x) for x in a]
+    b = [_to_f64(x) for x in b]
     r = [np.empty_like(x, dtype=bool) for x in a]
-    a = [x.astype(float) for x in a]
-    b = [x.astype(float) for x in b]
     _algo.longcross(r, a, b, n)
     return r
   else:
+    a = _to_f64(a)
+    b = _to_f64(b)
     r = np.empty_like(a, dtype=bool)
-    a = a.astype(float)
-    b = b.astype(float)
     _algo.longcross(r, a, b, n)
     return r
 
@@ -348,10 +368,12 @@ def LWMA(
   LWMA = SUM(Price * Weight) / SUM(Weight)
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.lwma(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.lwma(r, input, periods)
     return r
@@ -365,10 +387,12 @@ def MA(
   Ref: https://en.wikipedia.org/wiki/Moving_average#Simple_moving_average
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.ma(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.ma(r, input, periods)
     return r
@@ -380,15 +404,15 @@ def NEUTRALIZE(
   Neutralize the effect of a categorical variable on a numeric variable
   """
   if isinstance(category, list) and isinstance(input, list):
+    category = [_to_f64(x) for x in category]
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in category]
-    category = [x.astype(float) for x in category]
-    input = [x.astype(float) for x in input]
     _algo.neutralize(r, category, input)
     return r
   else:
+    category = _to_f64(category)
+    input = _to_f64(input)
     r = np.empty_like(category)
-    category = category.astype(float)
-    input = input.astype(float)
     _algo.neutralize(r, category, input)
     return r
 
@@ -403,10 +427,12 @@ def PRODUCT(
   Ref: https://www.amibroker.com/guide/afl/product.html
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.product(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.product(r, input, periods)
     return r
@@ -419,10 +445,12 @@ def RANK(
   Same value are averaged
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.rank(r, input)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.rank(r, input)
     return r
@@ -435,15 +463,15 @@ def RCROSS(
   alias: death_cross, cross_le
   """
   if isinstance(a, list) and isinstance(b, list):
+    a = [_to_f64(x) for x in a]
+    b = [_to_f64(x) for x in b]
     r = [np.empty_like(x, dtype=bool) for x in a]
-    a = [x.astype(float) for x in a]
-    b = [x.astype(float) for x in b]
     _algo.rcross(r, a, b)
     return r
   else:
+    a = _to_f64(a)
+    b = _to_f64(b)
     r = np.empty_like(a, dtype=bool)
-    a = a.astype(float)
-    b = b.astype(float)
     _algo.rcross(r, a, b)
     return r
 
@@ -456,10 +484,12 @@ def REF(
   Ref: https://www.amibroker.com/guide/afl/ref.html
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.ref(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.ref(r, input, periods)
     return r
@@ -473,15 +503,15 @@ def REGBETA(
   Beta = Cov(X, Y) / Var(X)
   """
   if isinstance(y, list) and isinstance(x, list):
+    y = [_to_f64(x) for x in y]
+    x = [_to_f64(x) for x in x]
     r = [np.empty_like(x) for x in y]
-    y = [x.astype(float) for x in y]
-    x = [x.astype(float) for x in x]
     _algo.regbeta(r, y, x, periods)
     return r
   else:
+    y = _to_f64(y)
+    x = _to_f64(x)
     r = np.empty_like(y)
-    y = y.astype(float)
-    x = x.astype(float)
     _algo.regbeta(r, y, x, periods)
     return r
 
@@ -494,15 +524,15 @@ def REGRESI(
   Returns the residual of the last point: epsilon = Y - (alpha + beta * X)
   """
   if isinstance(y, list) and isinstance(x, list):
+    y = [_to_f64(x) for x in y]
+    x = [_to_f64(x) for x in x]
     r = [np.empty_like(x) for x in y]
-    y = [x.astype(float) for x in y]
-    x = [x.astype(float) for x in x]
     _algo.regresi(r, y, x, periods)
     return r
   else:
+    y = _to_f64(y)
+    x = _to_f64(x)
     r = np.empty_like(y)
-    y = y.astype(float)
-    x = x.astype(float)
     _algo.regresi(r, y, x, periods)
     return r
 
@@ -513,15 +543,15 @@ def RLONGCROSS(
   For 2 arrays A and B, return true if previous N periods A > B, Current A <= B
   """
   if isinstance(a, list) and isinstance(b, list):
+    a = [_to_f64(x) for x in a]
+    b = [_to_f64(x) for x in b]
     r = [np.empty_like(x, dtype=bool) for x in a]
-    a = [x.astype(float) for x in a]
-    b = [x.astype(float) for x in b]
     _algo.rlongcross(r, a, b, n)
     return r
   else:
+    a = _to_f64(a)
+    b = _to_f64(b)
     r = np.empty_like(a, dtype=bool)
-    a = a.astype(float)
-    b = b.astype(float)
     _algo.rlongcross(r, a, b, n)
     return r
 
@@ -534,10 +564,12 @@ def SLOPE(
   Calculates the slope of the linear regression line for a moving window.
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.slope(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.slope(r, input, periods)
     return r
@@ -551,10 +583,12 @@ def SMA(
   Ref: https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.sma(r, input, n, m)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.sma(r, input, n, m)
     return r
@@ -568,10 +602,12 @@ def STDDEV(
   Ref: https://en.wikipedia.org/wiki/Standard_deviation
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.stddev(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.stddev(r, input, periods)
     return r
@@ -587,10 +623,12 @@ def SUM(
   Ref: https://www.amibroker.com/guide/afl/sum.html
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.sum(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.sum(r, input, periods)
     return r
@@ -604,10 +642,12 @@ def SUMBARS(
   Ref: https://www.amibroker.com/guide/afl/sumbars.html
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.sumbars(r, input, amount)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.sumbars(r, input, amount)
     return r
@@ -621,15 +661,15 @@ def SUMIF(
   Ref: Custom extension
   """
   if isinstance(input, list) and isinstance(condition, list):
+    input = [_to_f64(x) for x in input]
+    condition = [_to_f64(x) for x in condition]
     r = [np.empty_like(x) for x in input]
-    input = [x.astype(float) for x in input]
-    condition = [x.astype(float) for x in condition]
     _algo.sumif(r, input, condition, periods)
     return r
   else:
+    input = _to_f64(input)
+    condition = _to_f64(condition)
     r = np.empty_like(input)
-    input = input.astype(float)
-    condition = condition.astype(float)
     _algo.sumif(r, input, condition, periods)
     return r
 
@@ -643,10 +683,12 @@ def TS_BACKFILL(
   Leading NaNs (before any valid value) remain NaN.
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.ts_backfill(r, input)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.ts_backfill(r, input)
     return r
@@ -660,10 +702,12 @@ def TS_CORR(
   Calculates the correlation coefficient between the input series and the time index.
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.ts_corr(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.ts_corr(r, input, periods)
     return r
@@ -677,10 +721,12 @@ def TS_COUNT_NANS(
   For each position, counts the number of NaN values in the preceding `periods` elements.
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.ts_count_nans(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.ts_count_nans(r, input, periods)
     return r
@@ -697,10 +743,12 @@ def TS_ENTROPY(
   Requires at least 2 valid values. Single-value windows return 0.
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.ts_entropy(r, input, periods, bins)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.ts_entropy(r, input, periods, bins)
     return r
@@ -716,10 +764,12 @@ def TS_KURTOSIS(
   Requires at least 4 valid values.
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.ts_kurtosis(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.ts_kurtosis(r, input, periods)
     return r
@@ -734,10 +784,12 @@ def TS_MIN_MAX_DIFF(
   Single-pass using two monotonic deques for efficiency.
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.ts_min_max_diff(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.ts_min_max_diff(r, input, periods)
     return r
@@ -753,10 +805,12 @@ def TS_MOMENT(
   k=2 gives variance (population), k=3 gives raw third moment, etc.
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.ts_moment(r, input, periods, k)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.ts_moment(r, input, periods, k)
     return r
@@ -771,10 +825,12 @@ def TS_RANK(
   NaN values are treated as larger than all non-NaN values.
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.ts_rank(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.ts_rank(r, input, periods)
     return r
@@ -790,10 +846,12 @@ def TS_SKEWNESS(
   Requires at least 3 valid values.
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.ts_skewness(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.ts_skewness(r, input, periods)
     return r
@@ -808,10 +866,12 @@ def TS_WEIGHTED_DELAY(
   This is essentially LWMA applied to the lagged (shifted by 1) series over k periods.
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.ts_weighted_delay(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.ts_weighted_delay(r, input, periods)
     return r
@@ -826,10 +886,12 @@ def TS_ZSCORE(
   Uses sample stddev (ddof=1) to match pandas.
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.ts_zscore(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.ts_zscore(r, input, periods)
     return r
@@ -843,10 +905,12 @@ def VAR(
   Variance = (SumSq - (Sum^2)/N) / (N - 1)
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.var(r, input, periods)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.var(r, input, periods)
     return r
@@ -861,10 +925,12 @@ def ZSCORE(
   NaN values are excluded from mean/stddev computation. NaN input produces NaN output.
   """
   if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
     _algo.zscore(r, input)
     return r
   else:
+    input = _to_f64(input)
     r = np.empty_like(input)
     _algo.zscore(r, input)
     return r

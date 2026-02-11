@@ -239,7 +239,7 @@ class ExecContext:
   #   GTJA:  DECAYLINEAR, WMA
 
   def TS_DECAY_LINEAR(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.LWMA(np.asarray(a, dtype=np.float64), int(w))
+    return alpha.LWMA(a, int(w))
 
   DECAY_LINEAR = TS_DECAY_LINEAR   # wq101
   DECAYLINEAR = TS_DECAY_LINEAR    # gtja191
@@ -271,16 +271,12 @@ class ExecContext:
   #   GTJA: COUNT, SUMIF
 
   def TS_COUNT(self, cond: np.ndarray, w: int) -> np.ndarray:
-    return alpha.COUNT(cond.astype(np.float64), int(w))
+    return alpha.COUNT(cond, int(w))
 
   COUNT = TS_COUNT       # gtja191
 
   def TS_SUMIF(self, a: np.ndarray, w: int, cond) -> np.ndarray:
-    return alpha.SUMIF(
-      np.asarray(a, dtype=np.float64),
-      np.asarray(cond, dtype=np.float64),
-      int(w),
-    )
+    return alpha.SUMIF(a, cond, int(w))
 
   SUMIF = TS_SUMIF       # gtja191
 
@@ -351,13 +347,13 @@ class ExecContext:
   #   BRAIN: rank          wq101/GTJA: RANK
 
   def RANK(self, a: np.ndarray) -> np.ndarray:
-    return alpha.RANK(np.asarray(a, dtype=np.float64))
+    return alpha.RANK(a)
 
   # ── Z-Score ─────────────────────────────────────────────────────────
   #   BRAIN: zscore
 
   def ZSCORE(self, a: np.ndarray) -> np.ndarray:
-    return alpha.ZSCORE(np.asarray(a, dtype=np.float64))
+    return alpha.ZSCORE(a)
 
   # ── Scale ───────────────────────────────────────────────────────────
   #   BRAIN: scale         wq101: SCALE
@@ -375,19 +371,13 @@ class ExecContext:
   #   BRAIN: group_rank
 
   def GROUP_RANK(self, a: np.ndarray, group: np.ndarray) -> np.ndarray:
-    return alpha.GROUP_RANK(
-      np.asarray(group, dtype=np.float64),
-      np.asarray(a, dtype=np.float64),
-    )
+    return alpha.GROUP_RANK(group, a)
 
   # ── Group Z-Score ─────────────────────────────────────────────────
   #   BRAIN: group_zscore
 
   def GROUP_ZSCORE(self, a: np.ndarray, group: np.ndarray) -> np.ndarray:
-    return alpha.GROUP_ZSCORE(
-      np.asarray(group, dtype=np.float64),
-      np.asarray(a, dtype=np.float64),
-    )
+    return alpha.GROUP_ZSCORE(group, a)
 
   # ====================================================================
   #  Element-wise Operators

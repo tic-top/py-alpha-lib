@@ -1444,6 +1444,12 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
   writeln!(file, "import numpy as np")?;
   writeln!(file, "from . import _algo")?;
   writeln!(file, "")?;
+  writeln!(file, "def _to_f64(a):")?;
+  writeln!(file, "  \"\"\"Ensure array is float64. Zero-copy if already float64.\"\"\"")?;
+  writeln!(file, "  if a.dtype == np.float64:")?;
+  writeln!(file, "    return a")?;
+  writeln!(file, "  return a.astype(np.float64)")?;
+  writeln!(file, "")?;
 
   for func in functions {
     // Generate docstring
@@ -1520,15 +1526,14 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
         a_name, b_name, c_name
       )?;
 
+      for name in [a_name, b_name, c_name] {
+        writeln!(file, "    {} = [_to_f64(x) for x in {}]", name, name)?;
+      }
       writeln!(
         file,
         "    {} = [np.empty_like(x) for x in {}]",
         r_name, a_name
       )?;
-
-      for name in [a_name, b_name, c_name] {
-        writeln!(file, "    {} = [x.astype(float) for x in {}]", name, name)?;
-      }
 
       writeln!(
         file,
@@ -1539,10 +1544,10 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
       writeln!(file, "    return {}", r_name)?;
 
       writeln!(file, "  else:")?;
-      writeln!(file, "    {} = np.empty_like({})", r_name, a_name)?;
       for name in [a_name, b_name, c_name] {
-        writeln!(file, "    {} = {}.astype(float)", name, name)?;
+        writeln!(file, "    {} = _to_f64({})", name, name)?;
       }
+      writeln!(file, "    {} = np.empty_like({})", r_name, a_name)?;
 
       writeln!(
         file,
@@ -1610,21 +1615,18 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
 
       writeln!(
         file,
-        "    {} = [np.empty_like(x{}) for x in {}]",
-        r_name, dtype, a_name
-      )?;
-
-      // Inputs casting not strictly needed if already f64, but good for safety.
-      // Assuming inputs are numeric.
-      writeln!(
-        file,
-        "    {} = [x.astype(float) for x in {}]",
+        "    {} = [_to_f64(x) for x in {}]",
         a_name, a_name
       )?;
       writeln!(
         file,
-        "    {} = [x.astype(float) for x in {}]",
+        "    {} = [_to_f64(x) for x in {}]",
         b_name, b_name
+      )?;
+      writeln!(
+        file,
+        "    {} = [np.empty_like(x{}) for x in {}]",
+        r_name, dtype, a_name
       )?;
 
       writeln!(
@@ -1636,9 +1638,9 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
       writeln!(file, "    return {}", r_name)?;
 
       writeln!(file, "  else:")?;
+      writeln!(file, "    {} = _to_f64({})", a_name, a_name)?;
+      writeln!(file, "    {} = _to_f64({})", b_name, b_name)?;
       writeln!(file, "    {} = np.empty_like({}{})", r_name, a_name, dtype)?;
-      writeln!(file, "    {} = {}.astype(float)", a_name, a_name)?;
-      writeln!(file, "    {} = {}.astype(float)", b_name, b_name)?;
 
       writeln!(
         file,
@@ -1698,6 +1700,11 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
     } else {
       writeln!(
         file,
+        "    {} = [_to_f64(x) for x in {}]",
+        input_name, input_name
+      )?;
+      writeln!(
+        file,
         "    {} = [np.empty_like(x) for x in {}]",
         r_name, input_name
       )?;
@@ -1713,6 +1720,7 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
       )?;
       writeln!(file, "    {} = {}.astype(bool)", input_name, input_name)?;
     } else {
+      writeln!(file, "    {} = _to_f64({})", input_name, input_name)?;
       writeln!(file, "    {} = np.empty_like({})", r_name, input_name)?;
     }
     writeln!(file, "    _algo.{}({})", rust_func_name, call_params_str)?;
