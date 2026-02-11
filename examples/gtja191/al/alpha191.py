@@ -64,10 +64,10 @@ def alpha_009(ctx):
 
 
 
-# (RANK(MAX(((RET < 0) ? STD(RET, 20) : CLOSE)^2),5))
+# RANK(TSMAX(((RET < 0) ? STD(RET, 20) : CLOSE)^2, 5))
 def alpha_010(ctx):
   _RET = ctx('RET')
-  return ctx.RANK(ctx.MAX(np.power(np.where((_RET < 0), ctx.STD(_RET, 20), ctx('CLOSE')), 2)), 5)
+  return ctx.RANK(ctx.TSMAX(np.power(np.where((_RET < 0), ctx.STD(_RET, 20), ctx('CLOSE')), 2), 5))
 
 
 
@@ -140,9 +140,9 @@ def alpha_020(ctx):
 
 
 
-# REGBETA(MEAN(CLOSE,6),SEQUENCE(6))
+# REGBETA(MEAN(CLOSE,6),SEQUENCE,6)
 def alpha_021(ctx):
-  return ctx.REGBETA(ctx.MEAN(ctx('CLOSE'), 6), ctx.SEQUENCE(6))
+  return ctx.REGBETA(ctx.MEAN(ctx('CLOSE'), 6), ctx('SEQUENCE'), 6)
 
 
 
@@ -1039,9 +1039,9 @@ def alpha_146(ctx):
 
 
 
-# REGBETA(MEAN(CLOSE,12),SEQUENCE(12))
+# REGBETA(MEAN(CLOSE,12),SEQUENCE,12)
 def alpha_147(ctx):
-  return ctx.REGBETA(ctx.MEAN(ctx('CLOSE'), 12), ctx.SEQUENCE(12))
+  return ctx.REGBETA(ctx.MEAN(ctx('CLOSE'), 12), ctx('SEQUENCE'), 12)
 
 
 
@@ -1356,10 +1356,10 @@ def alpha_189(ctx):
 
 
 
-# LOG((COUNT(CLOSE/DELAY(CLOSE)-1>((CLOSE/DELAY(CLOSE,19))^(1/20)-1),20)-1)*(SUMIF(((CLOSE/DELAY(CLOSE)-1-(CLOSE/DELAY(CLOSE,19))^(1/20)-1))^2,20,CLOSE/DELAY(CLOSE)-1<(CLOSE/DELAY(CLOSE,19))^(1/20)- 1))/((COUNT((CLOSE/DELAY(CLOSE)-1<(CLOSE/DELAY(CLOSE,19))^(1/20)-1),20))*(SUMIF((CLOSE/DELAY(CLOSE)-1-((CLOSE/DELAY(CLOSE,19))^(1/20)-1))^2,20,CLOSE/DELAY(CLOSE)-1>(CLOSE/DELAY(CLOSE,19))^(1/20)-1))) )
+# LOG((COUNT(CLOSE/DELAY(CLOSE,1)-1>((CLOSE/DELAY(CLOSE,19))^(1/20)-1),20)-1)*(SUMIF(((CLOSE/DELAY(CLOSE,1)-1-(CLOSE/DELAY(CLOSE,19))^(1/20)-1))^2,20,CLOSE/DELAY(CLOSE,1)-1<(CLOSE/DELAY(CLOSE,19))^(1/20)-1))/((COUNT((CLOSE/DELAY(CLOSE,1)-1<(CLOSE/DELAY(CLOSE,19))^(1/20)-1),20))*(SUMIF((CLOSE/DELAY(CLOSE,1)-1-((CLOSE/DELAY(CLOSE,19))^(1/20)-1))^2,20,CLOSE/DELAY(CLOSE,1)-1>(CLOSE/DELAY(CLOSE,19))^(1/20)-1))))
 def alpha_190(ctx):
   _CLOSE = ctx('CLOSE')
-  return ctx.LOG(((ctx.COUNT((((_CLOSE / ctx.DELAY(_CLOSE)) - 1) > (np.power((_CLOSE / ctx.DELAY(_CLOSE, 19)), (1 / 20)) - 1)), 20) - 1) * ctx.SUMIF(np.power(((_CLOSE / ctx.DELAY(_CLOSE)) - 1 - np.power((_CLOSE / ctx.DELAY(_CLOSE, 19)), (1 / 20)) - 1), 2), 20, (((_CLOSE / ctx.DELAY(_CLOSE)) - 1) < (np.power((_CLOSE / ctx.DELAY(_CLOSE, 19)), (1 / 20)) - 1))) / (ctx.COUNT((((_CLOSE / ctx.DELAY(_CLOSE)) - 1) < (np.power((_CLOSE / ctx.DELAY(_CLOSE, 19)), (1 / 20)) - 1)), 20) * ctx.SUMIF(np.power(((_CLOSE / ctx.DELAY(_CLOSE)) - 1 - (np.power((_CLOSE / ctx.DELAY(_CLOSE, 19)), (1 / 20)) - 1)), 2), 20, (((_CLOSE / ctx.DELAY(_CLOSE)) - 1) > (np.power((_CLOSE / ctx.DELAY(_CLOSE, 19)), (1 / 20)) - 1))))))
+  return ctx.LOG(((ctx.COUNT((((_CLOSE / ctx.DELAY(_CLOSE, 1)) - 1) > (np.power((_CLOSE / ctx.DELAY(_CLOSE, 19)), (1 / 20)) - 1)), 20) - 1) * ctx.SUMIF(np.power(((_CLOSE / ctx.DELAY(_CLOSE, 1)) - 1 - np.power((_CLOSE / ctx.DELAY(_CLOSE, 19)), (1 / 20)) - 1), 2), 20, (((_CLOSE / ctx.DELAY(_CLOSE, 1)) - 1) < (np.power((_CLOSE / ctx.DELAY(_CLOSE, 19)), (1 / 20)) - 1))) / (ctx.COUNT((((_CLOSE / ctx.DELAY(_CLOSE, 1)) - 1) < (np.power((_CLOSE / ctx.DELAY(_CLOSE, 19)), (1 / 20)) - 1)), 20) * ctx.SUMIF(np.power(((_CLOSE / ctx.DELAY(_CLOSE, 1)) - 1 - (np.power((_CLOSE / ctx.DELAY(_CLOSE, 19)), (1 / 20)) - 1)), 2), 20, (((_CLOSE / ctx.DELAY(_CLOSE, 1)) - 1) > (np.power((_CLOSE / ctx.DELAY(_CLOSE, 19)), (1 / 20)) - 1))))))
 
 
 

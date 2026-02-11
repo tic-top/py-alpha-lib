@@ -371,12 +371,13 @@ class ExecContext:
   #   GTJA: COUNT, SUMIF
 
   def TS_COUNT(self, cond: np.ndarray, w: int) -> np.ndarray:
-    return alpha.COUNT(cond, int(w))
+    return alpha.COUNT(np.asarray(cond, dtype=bool), int(w))
 
   COUNT = TS_COUNT       # gtja191
 
   def TS_SUMIF(self, a: np.ndarray, w: int, cond) -> np.ndarray:
-    return alpha.SUMIF(a, cond, int(w))
+    return alpha.SUMIF(np.asarray(a, dtype=np.float64),
+                       np.asarray(cond, dtype=bool), int(w))
 
   SUMIF = TS_SUMIF       # gtja191
 

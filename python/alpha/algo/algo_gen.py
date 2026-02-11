@@ -662,13 +662,13 @@ def SUMIF(
   """
   if isinstance(input, list) and isinstance(condition, list):
     input = [_to_f64(x) for x in input]
-    condition = [_to_f64(x) for x in condition]
+    condition = [np.asarray(x, dtype=bool) for x in condition]
     r = [np.empty_like(x) for x in input]
     _algo.sumif(r, input, condition, periods)
     return r
   else:
     input = _to_f64(input)
-    condition = _to_f64(condition)
+    condition = np.asarray(condition, dtype=bool)
     r = np.empty_like(input)
     _algo.sumif(r, input, condition, periods)
     return r

@@ -18,8 +18,7 @@ def setup_context(data_path: str) -> tuple[ExecContext, int, int, int]:
   data = pl.read_csv(data_path).sort(["securityid", "tradetime"])
   security_count = data["securityid"].n_unique()
   trade_count = data["tradetime"].n_unique()
-  alpha.set_ctx(groups=security_count)
-  ctx = ExecContext(data, security_count, trade_count)
+  ctx = ExecContext(data)
   t2 = time.time()
   logger.info("Data loaded in %f seconds", t2 - t1)
   return ctx, trade_count, security_count, int((t2 - t1) * 1000)
@@ -37,7 +36,7 @@ def parse_args():
   return parser.parse_args()
 
 
-nofunc = set([10, 21, 30, 54, 127, 143, 144, 146, 147, 165, 181, 183, 190])
+nofunc = set([30, 54, 127, 143, 165, 181, 183])
 
 
 def main(args):
@@ -45,7 +44,7 @@ def main(args):
 
   if len(args.no) == 0:
     start = args.start or 1
-    end = args.end or 102
+    end = args.end or 192
     args.no = [i for i in filter(lambda x: x not in nofunc, range(start, end))]
 
   results = [("data", load_time, 0)]
