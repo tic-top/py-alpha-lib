@@ -147,16 +147,36 @@ pub fn ta_rank<NumT: Float + Send + Sync + Debug>(
     rank_window.sort_by(|a, b| a.0.cmp(&b.0));
     let r = r.get();
 
-    let mut prev_rank_value = rank_window[0].0.value;
-    let mut s = 0;
-    let total = NumT::from(rank_window.len()).unwrap();
+    // OrderedFloat sorts NaN to the beginning (NaN < everything).
+    // Find where valid (non-NaN) values start.
+    let nan_count = rank_window
+      .iter()
+      .take_while(|v| v.0.value.is_nan())
+      .count();
+    let valid_count = rank_window.len() - nan_count;
+
+    // Assign NaN to NaN positions
+    for i in 0..nan_count {
+      r[rank_window[i].1] = NumT::nan();
+    }
+
+    if valid_count == 0 {
+      return;
+    }
+
+    let total = NumT::from(valid_count).unwrap();
+
+    // Rank only valid values (starting from nan_count)
+    let mut prev_rank_value = rank_window[nan_count].0.value;
+    let mut s = nan_count;
 
     // chunk by same value
-    for e in 0..rank_window.len() {
+    for e in nan_count..rank_window.len() {
       if prev_rank_value == rank_window[e].0.value {
         continue;
       }
-      let rank_avg = NumT::from(e + s + 1).unwrap() / NumT::from(2usize).unwrap();
+      let rank_avg = NumT::from(e - nan_count + s - nan_count + 1).unwrap()
+        / NumT::from(2usize).unwrap();
       for i in s..e {
         r[rank_window[i].1] = rank_avg / total;
       }
@@ -164,8 +184,9 @@ pub fn ta_rank<NumT: Float + Send + Sync + Debug>(
       prev_rank_value = rank_window[e].0.value;
     }
 
-    // the last chunk
-    let rank_avg = NumT::from(rank_window.len() + s + 1).unwrap() / NumT::from(2usize).unwrap();
+    // the last chunk of valid values
+    let rank_avg = NumT::from(valid_count + s - nan_count + 1).unwrap()
+      / NumT::from(2usize).unwrap();
     for i in s..rank_window.len() {
       r[rank_window[i].1] = rank_avg / total;
     }
@@ -384,6 +405,30 @@ mod tests {
         2.0 / 3.0,
         3.0 / 3.0,
         3.0 / 3.0,
+      ],
+    );
+  }
+
+  #[test]
+  fn test_ta_rank_with_nan() {
+    // groups=3, matrix [3,NaN; 1,5; 4,6]
+    let input = vec![3.0, f64::NAN, 1.0, 5.0, 4.0, 6.0];
+    let mut r = vec![0.0; input.len()];
+    let ctx = Context::new(0, 3, 0);
+
+    ta_rank(&ctx, &mut r, &input).unwrap();
+    // j=0: values [3,1,4], all valid, sorted [1,3,4], ranks [2,1,3]
+    // j=1: values [NaN,5,6], 2 valid, sorted [5,6,NaN]
+    //   5 -> rank 1/2=0.5, 6 -> rank 2/2=1.0, NaN -> NaN
+    assert_vec_eq_nan(
+      &r,
+      &vec![
+        2.0 / 3.0,
+        f64::NAN,
+        1.0 / 3.0,
+        1.0 / 2.0,
+        3.0 / 3.0,
+        2.0 / 2.0,
       ],
     );
   }
