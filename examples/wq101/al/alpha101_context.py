@@ -83,7 +83,7 @@ class ExecContext:
     return alpha.LWMA(a, int(w))
 
   def SIGNEDPOWER(self, a: np.ndarray, p: float | np.ndarray) -> np.ndarray:
-    return np.power(a, p)
+    return np.sign(a) * np.power(np.abs(a), p)
 
   def LOG(self, a: np.ndarray) -> np.ndarray:
     return np.log(a)
