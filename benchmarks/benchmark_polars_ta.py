@@ -23,7 +23,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 logging.getLogger("expr_codegen").setLevel(logging.WARNING)
 
 # ── Paths ───────────────────────────────────────────────────────────────────
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_PATH = PROJECT_ROOT / "dataPerformance.csv"
 ALPHA101_EXPR = Path(
     "/home/null/quant/reference/因子计算引擎/alpha_examples/transformer/alpha101_out.txt"

@@ -22,14 +22,14 @@ from scipy import stats
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 # Add examples path for alpha-lib imports
-sys.path.insert(0, str(Path(__file__).parent / "examples" / "wq101"))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "examples" / "wq101"))
 
 import alpha
 from al.alpha101_context import ExecContext
 from al import alpha101
 
 # ── Config ──────────────────────────────────────────────────────────────────
-PROJECT_ROOT = Path(__file__).parent
 DATA_PATH = PROJECT_ROOT / "dataPerformance.csv"
 PARQUET_DIR = Path("/home/null/data/cn_stock_factors_alpha_101_exports")
 GT_OUTPUT = PROJECT_ROOT / "gt_alpha101.csv"

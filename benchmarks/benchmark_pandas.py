@@ -17,7 +17,7 @@ from scipy import stats
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 # ── Paths ───────────────────────────────────────────────────────────────────
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_PATH = PROJECT_ROOT / "dataPerformance.csv"
 AL_CSV = PROJECT_ROOT / "al_alpha101.csv"
 PT_CSV = PROJECT_ROOT / "pt_alpha101.csv"
