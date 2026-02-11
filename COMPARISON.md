@@ -101,22 +101,87 @@ Pandas 在 LWMA 前做 `ffill().bfill().fillna(0)` 预处理，alpha-lib 正确�
 | Factor | alpha-lib | pandas | 加速比 |
 |---|---|---|---|
 | alpha_001 | 33ms | 32,240ms | 977x |
+| alpha_002 | 42ms | 685ms | 16x |
+| alpha_003 | 29ms | 539ms | 19x |
 | alpha_004 | 14ms | 92,428ms | 6,602x |
+| alpha_005 | 25ms | 169ms | 7x |
+| alpha_006 | 6ms | 422ms | 77x |
 | alpha_007 | 30ms | 75,444ms | 2,515x |
+| alpha_008 | 19ms | 305ms | 16x |
+| alpha_009 | 29ms | 127ms | 4x |
+| alpha_010 | 45ms | 210ms | 5x |
+| alpha_011 | 31ms | 237ms | 8x |
+| alpha_012 | 10ms | 17ms | 2x |
+| alpha_013 | 31ms | 669ms | 22x |
+| alpha_014 | 29ms | 501ms | 17x |
+| alpha_015 | 34ms | 673ms | 20x |
+| alpha_016 | 31ms | 562ms | 18x |
 | alpha_017 | 44ms | 177,560ms | 4,035x |
+| alpha_018 | 33ms | 556ms | 17x |
+| alpha_019 | 18ms | 103ms | 6x |
+| alpha_020 | 23ms | 273ms | 12x |
+| alpha_021 | 28ms | 406ms | 15x |
+| alpha_022 | 20ms | 695ms | 35x |
+| alpha_023 | 8ms | - | - |
+| alpha_024 | 19ms | 136ms | 7x |
+| alpha_025 | 12ms | 139ms | 12x |
 | alpha_026 | 31ms | 185,351ms | 5,979x |
+| alpha_027 | 35ms | 675ms | 19x |
+| alpha_028 | 24ms | 636ms | 27x |
 | alpha_029 | 47ms | 91,282ms | 1,942x |
+| alpha_030 | 20ms | 178ms | 9x |
+| alpha_031 | 61ms | 985ms | 16x |
+| alpha_032 | 32ms | 501ms | 16x |
+| alpha_033 | 16ms | 91ms | 6x |
+| alpha_034 | 28ms | 371ms | 13x |
 | alpha_035 | 38ms | 263,594ms | 6,937x |
-| alpha_036 | 92ms | 95,351ms | 1,036x |
+| alpha_036 | 92ms | 95,351ms | 1,037x |
+| alpha_037 | 26ms | 535ms | 21x |
+| alpha_038 | 24ms | 94,936ms | 3,956x |
+| alpha_039 | 28ms | 297ms | 11x |
+| alpha_040 | 20ms | 558ms | 28x |
+| alpha_041 | 14ms | 4ms | 0.3x |
+| alpha_042 | 13ms | 130ms | 10x |
 | alpha_043 | 24ms | 174,838ms | 7,285x |
+| alpha_044 | 18ms | 487ms | 27x |
+| alpha_045 | 47ms | 1,291ms | 27x |
+| alpha_046 | 24ms | 30ms | 1x |
+| alpha_047 | 35ms | 343ms | 10x |
+| alpha_049 | 9ms | 18ms | 2x |
+| alpha_050 | 31ms | 682ms | 22x |
+| alpha_051 | 14ms | 14ms | 1x |
 | alpha_052 | 23ms | 92,591ms | 4,026x |
+| alpha_053 | 8ms | 9ms | 1x |
+| alpha_054 | 10ms | 20ms | 2x |
+| alpha_055 | 35ms | 792ms | 23x |
+| alpha_057 | 21ms | 31,689ms | 1,509x |
+| alpha_060 | 22ms | 34,148ms | 1,552x |
+| alpha_061 | 29ms | 671ms | 23x |
+| alpha_064 | 62ms | 790ms | 13x |
+| alpha_065 | 41ms | 760ms | 19x |
 | alpha_066 | 29ms | 93,920ms | 3,239x |
+| alpha_068 | 66ms | 87,173ms | 1,321x |
+| alpha_071 | 63ms | - | - |
 | alpha_072 | 65ms | 192,850ms | 2,967x |
+| alpha_073 | 34ms | - | - |
+| alpha_074 | 55ms | 2,281ms | 41x |
+| alpha_075 | 49ms | 1,253ms | 26x |
+| alpha_077 | 36ms | - | - |
+| alpha_078 | 60ms | 1,359ms | 23x |
+| alpha_081 | 62ms | 28,633ms | 462x |
+| alpha_083 | 27ms | 352ms | 13x |
+| alpha_084 | 32ms | 90,065ms | 2,814x |
 | alpha_085 | 72ms | 194,698ms | 2,704x |
+| alpha_086 | 32ms | 76,954ms | 2,405x |
+| alpha_088 | 67ms | - | - |
 | alpha_094 | 51ms | 230,125ms | 4,512x |
+| alpha_095 | 42ms | 67,088ms | 1,597x |
+| alpha_096 | 63ms | - | - |
 | alpha_098 | 49ms | 112,529ms | 2,297x |
+| alpha_099 | 48ms | 3,126ms | 65x |
+| alpha_101 | 8ms | 297ms | 39x |
 
-慢因子（含 ts_rank/correlation 的长窗口操作）加速比可达 **3,000x - 7,000x**，简单因子也有 **25x - 1,000x** 加速。
+含 `ts_rank` / `correlation` 长窗口操作的因子加速比 **1,000x - 7,000x**，简单因子 **2x - 100x**。
 
 ## 结论
 
