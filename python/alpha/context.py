@@ -19,11 +19,9 @@ Usage:
   from alpha.context import ExecContext
 
   data = pl.read_csv("data.csv").sort(["securityid", "tradetime"])
-  securities = data["securityid"].n_unique()
-  trades = data["tradetime"].n_unique()
-  alpha.set_ctx(groups=securities)
-
-  ctx = ExecContext(data, securities=securities, trades=trades)
+  ctx = ExecContext(data)
+  # securities/trades auto-inferred from securityid/tradetime columns
+  # alpha.set_ctx(groups=...) called automatically
 """
 
 import numpy as np
@@ -52,6 +50,21 @@ class ExecContext:
   """
 
   def __init__(self, data, securities: int = 0, trades: int = 0):
+    # Auto-infer securities and trades from data columns
+    if securities == 0 and trades == 0:
+      try:
+        securities = data["securityid"].n_unique()
+        trades = data["tradetime"].n_unique()
+      except Exception:
+        try:
+          securities = data["securityid"].nunique()
+          trades = data["tradetime"].nunique()
+        except Exception:
+          pass
+
+    if securities > 0:
+      alpha.set_ctx(groups=securities)
+
     self.OPEN = data["open"].to_numpy()
     self.HIGH = data["high"].to_numpy()
     self.LOW = data["low"].to_numpy()

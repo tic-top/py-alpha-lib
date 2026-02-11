@@ -178,26 +178,50 @@ py-alpha-lib @ git+https://github.com/msd-rs/py-alpha-lib.git@main
 
 ```python
 import alpha
+from alpha.context import ExecContext
+
+# ExecContext auto-infers groups from securityid/tradetime columns
+# and calls alpha.set_ctx(groups=...) automatically
+data = pl.read_csv("data.csv").sort(["securityid", "tradetime"])
+ctx = ExecContext(data)
+
+# Call operators directly on numpy arrays
+close = data["close"].to_numpy()
+ma20 = alpha.MA(close, 20)
+rank = alpha.RANK(close)       # cross-sectional rank (groups auto-configured)
+corr = alpha.CORR(close, data["vol"].to_numpy().astype(float), 10)
+```
+
+### Transpiler Workflow
+
+```bash
+# 1. Write factor expressions (WorldQuant syntax)
+cat factors.txt
+# Alpha#001: (rank(Ts_ArgMax(SignedPower(((returns < 0) ? stddev(returns, 20) : close), 2.), 5)) - 0.5)
+
+# 2. Transpile to Python
+python -m alpha.lang factors.txt > factors.py
+```
+
+```python
+# 3. Use generated code
+from alpha.context import ExecContext
+from factors import alpha_001
+
+data = pl.read_csv("data.csv").sort(["securityid", "tradetime"])
+ctx = ExecContext(data)  # auto-infers groups
+result = alpha_001(ctx)
+```
+
+### List API (Single Security)
+
+```python
+import alpha
 import numpy as np
 
-# 1. Load your data as numpy arrays (one per field)
-close = df["close"].to_numpy()
-volume = df["vol"].to_numpy().astype(np.float64)
-
-# 2. Configure context
-alpha.set_ctx(
-    groups=num_securities,     # number of stocks
-    flags=alpha.FLAG_SKIP_NAN  # optional: skip NaN in rolling windows
-)
-
-# 3. Call operators directly
-ma20 = alpha.MA(close, 20)
-std20 = alpha.STDDEV(close, 20)
-rank = alpha.RANK(close)  # cross-sectional rank (requires groups)
-corr = alpha.CORR(close, volume, 10)
-
-# 4. Or use the transpiler for factor expressions
-#    python -m alpha.lang your_factors.txt > factors.py
+# No groups needed for single-security time-series
+close = np.array([100, 102, 101, 105, 103], dtype=np.float64)
+ma3 = alpha.MA(close, 3)
 ```
 
 Data layout: flat 1D array `[stock1_day1, stock1_day2, ..., stockN_dayM]`, sorted by security then time. The `groups` parameter tells the library where each stock's data begins.

@@ -18,7 +18,6 @@ def setup_context(data_path: str) -> tuple[ExecContext, int, int, int]:
   data = pl.read_csv(data_path).sort(["securityid", "tradetime"])
   security_count = data["securityid"].n_unique()
   trade_count = data["tradetime"].n_unique()
-  alpha.set_ctx(groups=security_count)
   ctx = ExecContext(data)
   t2 = time.time()
   logger.info("Data loaded in %f seconds", t2 - t1)

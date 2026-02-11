@@ -8,6 +8,17 @@ def returns(a: np.ndarray):
 
 class ExecContext:
   def __init__(self, data):
+    # Auto-infer groups from data
+    try:
+      securities = data["securityid"].n_unique()
+    except Exception:
+      try:
+        securities = data["securityid"].nunique()
+      except Exception:
+        securities = 0
+    if securities > 0:
+      alpha.set_ctx(groups=securities)
+
     self.OPEN = data["open"].to_numpy()
     self.HIGH = data["high"].to_numpy()
     self.LOW = data["low"].to_numpy()
