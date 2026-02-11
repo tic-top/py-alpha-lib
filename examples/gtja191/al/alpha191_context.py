@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 import alpha
 
@@ -8,7 +7,7 @@ def returns(a: np.ndarray):
 
 
 class ExecContext:
-  def __init__(self, data: pd.DataFrame, securities: int, trades: int):
+  def __init__(self, data, securities: int, trades: int):
     self.OPEN = data["open"].to_numpy()
     self.HIGH = data["high"].to_numpy()
     self.LOW = data["low"].to_numpy()
@@ -23,6 +22,7 @@ class ExecContext:
     self.TR = self._TR()
     self.HD = self._HD()
     self.LD = self._LD()
+    self._SEQUENCE = np.tile(np.arange(1, trades + 1, dtype=np.float64), securities)
 
   def __call__(self, name: str) -> np.ndarray:
     if name.startswith("ADV"):
@@ -32,6 +32,12 @@ class ExecContext:
       else:
         w = int(n)
         return self.SMA(self.VOLUME, w)
+    if name == "AMOUNT":
+      return self.VOLUME
+    if name == "VOL":
+      return self.VOLUME
+    if name == "SEQUENCE":
+      return self._SEQUENCE
     return getattr(self, name)
 
   def _DTM(self):
@@ -150,3 +156,30 @@ class ExecContext:
 
   def SEQUENCE(self, w: int) -> np.ndarray:
     return np.arange(w + 1).astype(np.float64)
+
+  def COUNT(self, cond: np.ndarray, w: int) -> np.ndarray:
+    return alpha.COUNT(cond.astype(np.float64), int(w))
+
+  def DECAYLINEAR(self, a: np.ndarray, w: int) -> np.ndarray:
+    return alpha.LWMA(a, int(w))
+
+  def HIGHDAY(self, a: np.ndarray, w: int) -> np.ndarray:
+    return alpha.HHVBARS(a, int(w))
+
+  def LOWDAY(self, a: np.ndarray, w: int) -> np.ndarray:
+    return alpha.LLVBARS(a, int(w))
+
+  def MA(self, a: np.ndarray, w: int) -> np.ndarray:
+    return alpha.MA(a, int(w))
+
+  def PROD(self, a: np.ndarray, w: int) -> np.ndarray:
+    return alpha.PRODUCT(a, int(w))
+
+  def WMA(self, a: np.ndarray, w: int) -> np.ndarray:
+    return alpha.LWMA(a, int(w))
+
+  def SUMIF(self, a: np.ndarray, w: int, cond) -> np.ndarray:
+    return alpha.SUMIF(np.asarray(a, dtype=np.float64), np.asarray(cond, dtype=np.float64), int(w))
+
+  def FILTER(self, a: np.ndarray, cond: np.ndarray) -> np.ndarray:
+    return np.where(cond, a, np.nan)

@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 import alpha
 
@@ -8,7 +7,7 @@ def returns(a: np.ndarray):
 
 
 class ExecContext:
-  def __init__(self, data: pd.DataFrame):
+  def __init__(self, data):
     self.OPEN = data["open"].to_numpy()
     self.HIGH = data["high"].to_numpy()
     self.LOW = data["low"].to_numpy()
