@@ -188,6 +188,53 @@ def FRET(
     _algo.fret(r, open, close, is_calc, delay, periods)
     return r
 
+def GROUP_RANK(
+  category: np.ndarray | list[np.ndarray], input: np.ndarray | list[np.ndarray]
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate rank percentage within each category group at each time step
+  
+  For each time position, groups items by `category` value, then computes
+  rank percentage within each group. Same value gets averaged rank.
+  NaN in category or input produces NaN output.
+  """
+  if isinstance(category, list) and isinstance(input, list):
+    r = [np.empty_like(x) for x in category]
+    category = [x.astype(float) for x in category]
+    input = [x.astype(float) for x in input]
+    _algo.group_rank(r, category, input)
+    return r
+  else:
+    r = np.empty_like(category)
+    category = category.astype(float)
+    input = input.astype(float)
+    _algo.group_rank(r, category, input)
+    return r
+
+def GROUP_ZSCORE(
+  category: np.ndarray | list[np.ndarray], input: np.ndarray | list[np.ndarray]
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate Z-Score within each category group at each time step
+  
+  For each time position, groups items by `category` value, then computes
+  (x - group_mean) / group_std within each group.
+  NaN in category or input produces NaN output.
+  Groups with fewer than 2 valid values produce NaN.
+  """
+  if isinstance(category, list) and isinstance(input, list):
+    r = [np.empty_like(x) for x in category]
+    category = [x.astype(float) for x in category]
+    input = [x.astype(float) for x in input]
+    _algo.group_zscore(r, category, input)
+    return r
+  else:
+    r = np.empty_like(category)
+    category = category.astype(float)
+    input = input.astype(float)
+    _algo.group_zscore(r, category, input)
+    return r
+
 def HHV(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
@@ -586,6 +633,24 @@ def SUMIF(
     _algo.sumif(r, input, condition, periods)
     return r
 
+def TS_BACKFILL(
+  input: np.ndarray | list[np.ndarray]
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Forward-fill NaN values with the last valid observation
+  
+  Iterates forward through each group; if x[i] is NaN, copies the last valid value.
+  Leading NaNs (before any valid value) remain NaN.
+  """
+  if isinstance(input, list):
+    r = [np.empty_like(x) for x in input]
+    _algo.ts_backfill(r, input)
+    return r
+  else:
+    r = np.empty_like(input)
+    _algo.ts_backfill(r, input)
+    return r
+
 def TS_CORR(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
@@ -601,6 +666,99 @@ def TS_CORR(
   else:
     r = np.empty_like(input)
     _algo.ts_corr(r, input, periods)
+    return r
+
+def TS_COUNT_NANS(
+  input: np.ndarray | list[np.ndarray], periods: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Count number of NaN values in a rolling window
+  
+  For each position, counts the number of NaN values in the preceding `periods` elements.
+  """
+  if isinstance(input, list):
+    r = [np.empty_like(x) for x in input]
+    _algo.ts_count_nans(r, input, periods)
+    return r
+  else:
+    r = np.empty_like(input)
+    _algo.ts_count_nans(r, input, periods)
+    return r
+
+def TS_ENTROPY(
+  input: np.ndarray | list[np.ndarray], periods: int, bins: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate rolling Shannon entropy over a moving window
+  
+  Discretizes values into `bins` equal-width buckets within the window's
+  [min, max] range, then computes -sum(p * ln(p)) where p is the frequency
+  of each occupied bin. Uses natural log (base e).
+  Requires at least 2 valid values. Single-value windows return 0.
+  """
+  if isinstance(input, list):
+    r = [np.empty_like(x) for x in input]
+    _algo.ts_entropy(r, input, periods, bins)
+    return r
+  else:
+    r = np.empty_like(input)
+    _algo.ts_entropy(r, input, periods, bins)
+    return r
+
+def TS_KURTOSIS(
+  input: np.ndarray | list[np.ndarray], periods: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate rolling sample excess Kurtosis over a moving window
+  
+  Uses adjusted Fisher formula (matches pandas):
+  kurt = n(n+1)/((n-1)(n-2)(n-3)) * sum(((x-mean)/std)^4) - 3(n-1)^2/((n-2)(n-3))
+  Requires at least 4 valid values.
+  """
+  if isinstance(input, list):
+    r = [np.empty_like(x) for x in input]
+    _algo.ts_kurtosis(r, input, periods)
+    return r
+  else:
+    r = np.empty_like(input)
+    _algo.ts_kurtosis(r, input, periods)
+    return r
+
+def TS_MIN_MAX_DIFF(
+  input: np.ndarray | list[np.ndarray], periods: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate rolling min-max difference (range) over a moving window
+  
+  TS_MIN_MAX_DIFF = TS_MAX(x, d) - TS_MIN(x, d)
+  Single-pass using two monotonic deques for efficiency.
+  """
+  if isinstance(input, list):
+    r = [np.empty_like(x) for x in input]
+    _algo.ts_min_max_diff(r, input, periods)
+    return r
+  else:
+    r = np.empty_like(input)
+    _algo.ts_min_max_diff(r, input, periods)
+    return r
+
+def TS_MOMENT(
+  input: np.ndarray | list[np.ndarray], periods: int, k: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate rolling k-th central moment over a moving window
+  
+  TS_MOMENT(x, d, k) = mean((x - mean)^k) over window of d periods.
+  This is the raw (non-adjusted) sample moment.
+  k=2 gives variance (population), k=3 gives raw third moment, etc.
+  """
+  if isinstance(input, list):
+    r = [np.empty_like(x) for x in input]
+    _algo.ts_moment(r, input, periods, k)
+    return r
+  else:
+    r = np.empty_like(input)
+    _algo.ts_moment(r, input, periods, k)
     return r
 
 def TS_RANK(
@@ -621,6 +779,61 @@ def TS_RANK(
     _algo.ts_rank(r, input, periods)
     return r
 
+def TS_SKEWNESS(
+  input: np.ndarray | list[np.ndarray], periods: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate rolling sample Skewness over a moving window
+  
+  Uses adjusted Fisher-Pearson formula (matches pandas):
+  skew = n / ((n-1)(n-2)) * sum(((x-mean)/std)^3)
+  Requires at least 3 valid values.
+  """
+  if isinstance(input, list):
+    r = [np.empty_like(x) for x in input]
+    _algo.ts_skewness(r, input, periods)
+    return r
+  else:
+    r = np.empty_like(input)
+    _algo.ts_skewness(r, input, periods)
+    return r
+
+def TS_WEIGHTED_DELAY(
+  input: np.ndarray | list[np.ndarray], periods: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate weighted delay (exponentially weighted lag)
+  
+  TS_WEIGHTED_DELAY(x, k) = (k * x[t-1] + (k-1) * x[t-2] + ... + 1 * x[t-k]) / (k*(k+1)/2)
+  This is essentially LWMA applied to the lagged (shifted by 1) series over k periods.
+  """
+  if isinstance(input, list):
+    r = [np.empty_like(x) for x in input]
+    _algo.ts_weighted_delay(r, input, periods)
+    return r
+  else:
+    r = np.empty_like(input)
+    _algo.ts_weighted_delay(r, input, periods)
+    return r
+
+def TS_ZSCORE(
+  input: np.ndarray | list[np.ndarray], periods: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate rolling Z-Score over a moving window
+  
+  Z-Score = (x - mean) / stddev, computed over a rolling window of `periods`.
+  Uses sample stddev (ddof=1) to match pandas.
+  """
+  if isinstance(input, list):
+    r = [np.empty_like(x) for x in input]
+    _algo.ts_zscore(r, input, periods)
+    return r
+  else:
+    r = np.empty_like(input)
+    _algo.ts_zscore(r, input, periods)
+    return r
+
 def VAR(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
@@ -636,5 +849,23 @@ def VAR(
   else:
     r = np.empty_like(input)
     _algo.var(r, input, periods)
+    return r
+
+def ZSCORE(
+  input: np.ndarray | list[np.ndarray]
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate cross-sectional Z-Score across groups at each time step
+  
+  Z-Score = (x - mean) / stddev, computed across all groups for each time position.
+  NaN values are excluded from mean/stddev computation. NaN input produces NaN output.
+  """
+  if isinstance(input, list):
+    r = [np.empty_like(x) for x in input]
+    _algo.zscore(r, input)
+    return r
+  else:
+    r = np.empty_like(input)
+    _algo.zscore(r, input)
     return r
 

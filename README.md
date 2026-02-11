@@ -71,6 +71,8 @@ Control computation behavior via `alpha.set_ctx()`:
 | DMA | Exponential moving average (custom weight) |
 | EMA | Exponential moving average (weight = 2/(n+1)) |
 | FRET | Future return calculation |
+| GROUP_RANK | Rank percentage within category group |
+| GROUP_ZSCORE | Z-score within category group |
 | HHV / LLV | Highest / lowest value in window |
 | HHVBARS / LLVBARS | Bars since highest / lowest value |
 | INTERCEPT | Linear regression intercept |
@@ -91,9 +93,19 @@ Control computation behavior via `alpha.set_ctx()`:
 | SUM | Rolling sum (0 = cumulative) |
 | SUMBARS | Bars until sum reaches threshold |
 | SUMIF | Conditional rolling sum |
+| TS_BACKFILL | Forward-fill NaN with last valid value |
 | TS_CORR | Time series correlation |
+| TS_COUNT_NANS | Rolling count of NaN values in window |
+| TS_ENTROPY | Rolling Shannon entropy over binned window |
+| TS_KURTOSIS | Rolling excess kurtosis (Fisher-adjusted) |
+| TS_MIN_MAX_DIFF | Rolling range (max - min) over window |
+| TS_MOMENT | Rolling k-th central moment |
 | TS_RANK | Rank within sliding window |
+| TS_SKEWNESS | Rolling skewness (Fisher-Pearson adjusted) |
+| TS_WEIGHTED_DELAY | Exponentially weighted lag (LWMA of lagged series) |
+| TS_ZSCORE | Rolling z-score over window |
 | VAR | Rolling variance |
+| ZSCORE | Cross-sectional z-score |
 
 Full function signatures: [python/alpha/algo.md](python/alpha/algo.md)
 

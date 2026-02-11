@@ -4,9 +4,15 @@
 """
 Generic ExecContext for alpha factor computation.
 
-Supports both WorldQuant Alpha 101 and GTJA Alpha 191 naming conventions.
-All method names from both DSLs are available — e.g., CORRELATION and CORR
-both map to alpha.CORR.
+Naming convention: WQ BRAIN is the canonical naming standard.
+  - TS_XXX(x, d)    — time-series / rolling window operators
+  - XXX(x)          — cross-sectional operators (across groups)
+  - Element-wise    — MAX, MIN, ABS, SIGN, LOG, etc.
+
+Aliases from other systems are provided for compatibility:
+  - WQ Alpha 101:  CORRELATION, COVARIANCE, DECAY_LINEAR, SIGNEDPOWER, ...
+  - GTJA Alpha 191: SUMAC, STD, HIGHDAY, LOWDAY, DECAYLINEAR, REGBETA, ...
+  - AmiBroker/通达信: HHV, LLV, HHVBARS, LLVBARS, REF, DMA, ...
 
 Usage:
   import alpha
@@ -35,7 +41,7 @@ class ExecContext:
   Provides:
     - OHLCV data fields (OPEN, HIGH, LOW, CLOSE, VOLUME, VWAP)
     - Derived fields (RETURNS/RET, DTM, DBM, TR, HD, LD, SEQUENCE)
-    - All operator methods used by both wq101 and gtja191 transpiler output
+    - All operator methods used by wq101, gtja191, and WQ BRAIN transpiler output
     - Dynamic ADV{n} access (average daily volume over n days)
     - Variable aliases (AMOUNT=VOLUME, VOL=VOLUME)
 
@@ -108,91 +114,89 @@ class ExecContext:
       np.abs(self.LOW - alpha.REF(self.CLOSE, 1)),
     )
 
-  # ── Rolling window operators ───────────────────────────────────────
+  # ====================================================================
+  #  TS_ — Time-Series / Rolling Window Operators
+  #
+  #  Canonical form: TS_XXX(x, d)
+  #  All rolling-window operators use the TS_ prefix.
+  # ====================================================================
 
-  def SUM(self, a: np.ndarray, w: int) -> np.ndarray:
+  # ── TS: Sum ─────────────────────────────────────────────────────────
+  #   BRAIN: ts_sum        GTJA: SUM, SUMAC        AmiBroker: SUM
+
+  def TS_SUM(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.SUM(a, int(w))
 
-  def SUMAC(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.SUM(a, int(w))
+  SUM = TS_SUM       # wq101 / gtja191 / AmiBroker
+  SUMAC = TS_SUM     # gtja191
 
-  def MA(self, a: np.ndarray, w: int) -> np.ndarray:
+  # ── TS: Mean ────────────────────────────────────────────────────────
+  #   BRAIN: ts_mean       GTJA: MA, MEAN          AmiBroker: MA
+
+  def TS_MEAN(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.MA(a, int(w))
 
-  def MEAN(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.MA(a, int(w))
+  MA = TS_MEAN       # universal
+  MEAN = TS_MEAN     # wq101
 
-  def SMA(self, a, *args) -> np.ndarray:
-    """SMA with 2 args = simple MA, with 3 args = EMA variant (weight=m/n)."""
-    if len(args) == 1:
-      # wq101 style: SMA(data, window) = simple moving average
-      return alpha.MA(a, int(args[0]))
-    else:
-      # gtja191 style: SMA(data, m, n) = EMA variant
-      return alpha.SMA(a, int(args[0]), int(args[1]))
+  # ── TS: EMA family ──────────────────────────────────────────────────
+  #   Not in BRAIN canonical set, but widely used in GTJA/AmiBroker
 
   def EMA(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.EMA(a, int(w))
 
-  def STDDEV(self, a: np.ndarray, w: int) -> np.ndarray:
+  def SMA(self, a, *args) -> np.ndarray:
+    """SMA with 2 args = simple MA, with 3 args = EMA variant (weight=m/n)."""
+    if len(args) == 1:
+      return alpha.MA(a, int(args[0]))
+    else:
+      return alpha.SMA(a, int(args[0]), int(args[1]))
+
+  # ── TS: Std Dev / Variance ─────────────────────────────────────────
+  #   BRAIN: ts_std_dev    GTJA: STD               wq101: STDDEV
+
+  def TS_STD_DEV(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.STDDEV(a, int(w))
 
-  def STD(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.STDDEV(a, int(w))
+  STDDEV = TS_STD_DEV   # wq101
+  STD = TS_STD_DEV      # gtja191
 
-  def VAR(self, a: np.ndarray, w: int) -> np.ndarray:
+  def TS_VARIANCE(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.VAR(a, int(w))
 
-  # ── Correlation / Covariance ───────────────────────────────────────
+  VAR = TS_VARIANCE     # gtja191
 
-  def CORR(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
+  # ── TS: Correlation / Covariance (two-input) ───────────────────────
+  #   BRAIN: ts_correlation, ts_covariance
+  #   wq101: CORRELATION, COVARIANCE
+  #   GTJA:  CORR, COV
+
+  def TS_CORRELATION(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
     return alpha.CORR(a, b, int(w))
 
-  def CORRELATION(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
-    return alpha.CORR(a, b, int(w))
+  CORR = TS_CORRELATION         # gtja191
+  CORRELATION = TS_CORRELATION  # wq101
 
-  def COV(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
+  def TS_COVARIANCE(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
     return alpha.COV(a, b, int(w))
 
-  def COVARIANCE(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
-    return alpha.COV(a, b, int(w))
+  COV = TS_COVARIANCE           # gtja191
+  COVARIANCE = TS_COVARIANCE    # wq101
 
-  # ── Extremes ───────────────────────────────────────────────────────
-
-  def TSMAX(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.HHV(a, int(w))
+  # ── TS: Extremes ───────────────────────────────────────────────────
+  #   BRAIN: ts_max, ts_min, ts_argmax, ts_argmin
+  #   GTJA:  TSMAX, TSMIN, HIGHDAY, LOWDAY
+  #   AmiBroker: HHV, LLV, HHVBARS, LLVBARS
 
   def TS_MAX(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.HHV(a, int(w))
 
-  def TSMIN(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.LLV(a, int(w))
+  TSMAX = TS_MAX     # gtja191
 
   def TS_MIN(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.LLV(a, int(w))
 
-  def MAX(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
-    return np.maximum(a, b)
-
-  def MIN(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
-    return np.minimum(a, b)
-
-  def HIGHDAY(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.HHVBARS(a, int(w))
-
-  def LOWDAY(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.LLVBARS(a, int(w))
-
-  # ── Rank ───────────────────────────────────────────────────────────
-
-  def RANK(self, a: np.ndarray) -> np.ndarray:
-    return alpha.RANK(np.asarray(a, dtype=np.float64))
-
-  def TSRANK(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.TS_RANK(a, int(w))
-
-  def TS_RANK(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.TS_RANK(a, int(w))
+  TSMIN = TS_MIN     # gtja191
 
   def TS_ARGMAX(self, a: np.ndarray, w: int) -> np.ndarray:
     return int(w) - alpha.HHVBARS(a, int(w))
@@ -200,69 +204,225 @@ class ExecContext:
   def TS_ARGMIN(self, a: np.ndarray, w: int) -> np.ndarray:
     return int(w) - alpha.LLVBARS(a, int(w))
 
-  # ── Shift / Delta ──────────────────────────────────────────────────
+  def HIGHDAY(self, a: np.ndarray, w: int) -> np.ndarray:
+    return alpha.HHVBARS(a, int(w))
 
-  def DELTA(self, a: np.ndarray, p: int) -> np.ndarray:
-    return a - alpha.REF(a, int(p))
+  def LOWDAY(self, a: np.ndarray, w: int) -> np.ndarray:
+    return alpha.LLVBARS(a, int(w))
 
-  def DELAY(self, a: np.ndarray, p: int) -> np.ndarray:
+  # ── TS: Rank ───────────────────────────────────────────────────────
+  #   BRAIN: ts_rank       GTJA: TSRANK
+
+  def TS_RANK(self, a: np.ndarray, w: int) -> np.ndarray:
+    return alpha.TS_RANK(a, int(w))
+
+  TSRANK = TS_RANK   # gtja191
+
+  # ── TS: Delay / Delta ──────────────────────────────────────────────
+  #   BRAIN: ts_delay, ts_delta
+  #   wq101: DELAY, DELTA
+  #   AmiBroker: REF
+
+  def TS_DELAY(self, a: np.ndarray, p: int) -> np.ndarray:
     return alpha.REF(a, int(p))
 
-  # ── Weighted averages ──────────────────────────────────────────────
+  DELAY = TS_DELAY   # wq101
 
-  def DECAY_LINEAR(self, a: np.ndarray, w: int) -> np.ndarray:
+  def TS_DELTA(self, a: np.ndarray, p: int) -> np.ndarray:
+    return a - alpha.REF(a, int(p))
+
+  DELTA = TS_DELTA   # wq101
+
+  # ── TS: Decay Linear / Weighted Mean ───────────────────────────────
+  #   BRAIN: ts_decay_linear
+  #   wq101: DECAY_LINEAR
+  #   GTJA:  DECAYLINEAR, WMA
+
+  def TS_DECAY_LINEAR(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.LWMA(np.asarray(a, dtype=np.float64), int(w))
 
-  def DECAYLINEAR(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.LWMA(np.asarray(a, dtype=np.float64), int(w))
+  DECAY_LINEAR = TS_DECAY_LINEAR   # wq101
+  DECAYLINEAR = TS_DECAY_LINEAR    # gtja191
+  WMA = TS_DECAY_LINEAR            # gtja191
 
-  def WMA(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.LWMA(np.asarray(a, dtype=np.float64), int(w))
+  # ── TS: Product ────────────────────────────────────────────────────
+  #   BRAIN: ts_product    wq101: PRODUCT    GTJA: PROD
 
-  # ── Products ───────────────────────────────────────────────────────
-
-  def PRODUCT(self, a: np.ndarray, w: int) -> np.ndarray:
+  def TS_PRODUCT(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.PRODUCT(a, int(w))
 
-  def PROD(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.PRODUCT(a, int(w))
+  PRODUCT = TS_PRODUCT   # wq101
+  PROD = TS_PRODUCT      # gtja191
 
-  # ── Regression ─────────────────────────────────────────────────────
+  # ── TS: Regression ─────────────────────────────────────────────────
+  #   GTJA: REGBETA, REGRESI
 
-  def REGBETA(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
+  def TS_REGBETA(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
     return alpha.REGBETA(a, b, int(w))
 
-  def REGRESI(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
+  REGBETA = TS_REGBETA   # gtja191
+
+  def TS_REGRESI(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
     return alpha.REGRESI(a, b, int(w))
 
-  # ── Conditional / counting ─────────────────────────────────────────
+  REGRESI = TS_REGRESI   # gtja191
 
-  def COUNT(self, cond: np.ndarray, w: int) -> np.ndarray:
+  # ── TS: Counting / Conditional ─────────────────────────────────────
+  #   GTJA: COUNT, SUMIF
+
+  def TS_COUNT(self, cond: np.ndarray, w: int) -> np.ndarray:
     return alpha.COUNT(cond.astype(np.float64), int(w))
 
-  def SUMIF(self, a: np.ndarray, w: int, cond) -> np.ndarray:
+  COUNT = TS_COUNT       # gtja191
+
+  def TS_SUMIF(self, a: np.ndarray, w: int, cond) -> np.ndarray:
     return alpha.SUMIF(
       np.asarray(a, dtype=np.float64),
       np.asarray(cond, dtype=np.float64),
       int(w),
     )
 
-  def FILTER(self, a: np.ndarray, cond: np.ndarray) -> np.ndarray:
-    return np.where(cond, a, np.nan)
+  SUMIF = TS_SUMIF       # gtja191
 
-  # ── Math ───────────────────────────────────────────────────────────
+  # ── TS: Z-Score ────────────────────────────────────────────────────
+  #   BRAIN: ts_zscore
+
+  def TS_ZSCORE(self, a: np.ndarray, w: int) -> np.ndarray:
+    return alpha.TS_ZSCORE(a, int(w))
+
+  # ── TS: Higher Moments ─────────────────────────────────────────────
+  #   BRAIN: ts_skewness, ts_kurtosis
+
+  def TS_SKEWNESS(self, a: np.ndarray, w: int) -> np.ndarray:
+    return alpha.TS_SKEWNESS(a, int(w))
+
+  def TS_KURTOSIS(self, a: np.ndarray, w: int) -> np.ndarray:
+    return alpha.TS_KURTOSIS(a, int(w))
+
+  # ── TS: Data Utilities ─────────────────────────────────────────────
+  #   BRAIN: ts_backfill, ts_count_nans
+
+  def TS_BACKFILL(self, a: np.ndarray) -> np.ndarray:
+    return alpha.TS_BACKFILL(a)
+
+  def TS_COUNT_NANS(self, a: np.ndarray, w: int) -> np.ndarray:
+    return alpha.TS_COUNT_NANS(a, int(w))
+
+  # ── TS: Entropy ────────────────────────────────────────────────────
+  #   BRAIN: ts_entropy
+
+  def TS_ENTROPY(self, a: np.ndarray, w: int, bins: int = 10) -> np.ndarray:
+    return alpha.TS_ENTROPY(a, int(w), int(bins))
+
+  # ── TS: Min-Max Diff (Range) ─────────────────────────────────────
+  #   BRAIN: ts_min_max_diff
+
+  def TS_MIN_MAX_DIFF(self, a: np.ndarray, w: int) -> np.ndarray:
+    return alpha.TS_MIN_MAX_DIFF(a, int(w))
+
+  # ── TS: Weighted Delay ───────────────────────────────────────────
+  #   BRAIN: ts_weighted_delay
+
+  def TS_WEIGHTED_DELAY(self, a: np.ndarray, w: int) -> np.ndarray:
+    return alpha.TS_WEIGHTED_DELAY(a, int(w))
+
+  # ── TS: Central Moment ───────────────────────────────────────────
+  #   BRAIN: ts_moment
+
+  def TS_MOMENT(self, a: np.ndarray, w: int, k: int = 2) -> np.ndarray:
+    return alpha.TS_MOMENT(a, int(w), int(k))
+
+  # ── TS: Cross Detection ────────────────────────────────────────────
+  #   AmiBroker/GTJA: CROSS, LONGCROSS
+
+  def CROSS(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    return alpha.CROSS(a, b)
+
+  def LONGCROSS(self, a: np.ndarray, b: np.ndarray, n: int) -> np.ndarray:
+    return alpha.LONGCROSS(a, b, int(n))
+
+  # ====================================================================
+  #  Cross-Sectional Operators (no prefix)
+  #
+  #  Operate across all groups at each time step.
+  # ====================================================================
+
+  # ── Rank ────────────────────────────────────────────────────────────
+  #   BRAIN: rank          wq101/GTJA: RANK
+
+  def RANK(self, a: np.ndarray) -> np.ndarray:
+    return alpha.RANK(np.asarray(a, dtype=np.float64))
+
+  # ── Z-Score ─────────────────────────────────────────────────────────
+  #   BRAIN: zscore
+
+  def ZSCORE(self, a: np.ndarray) -> np.ndarray:
+    return alpha.ZSCORE(np.asarray(a, dtype=np.float64))
+
+  # ── Scale ───────────────────────────────────────────────────────────
+  #   BRAIN: scale         wq101: SCALE
 
   def SCALE(self, a: np.ndarray, k: int = 1) -> np.ndarray:
     return a * k / np.abs(a).sum()
 
-  def SIGNEDPOWER(self, a: np.ndarray, p) -> np.ndarray:
-    return np.sign(a) * np.power(np.abs(a), p)
+  # ====================================================================
+  #  Grouped Cross-Sectional Operators (GROUP_ prefix)
+  #
+  #  Operate across items within each category group at each time step.
+  # ====================================================================
 
-  def LOG(self, a: np.ndarray) -> np.ndarray:
-    return np.log(a)
+  # ── Group Rank ────────────────────────────────────────────────────
+  #   BRAIN: group_rank
+
+  def GROUP_RANK(self, a: np.ndarray, group: np.ndarray) -> np.ndarray:
+    return alpha.GROUP_RANK(
+      np.asarray(group, dtype=np.float64),
+      np.asarray(a, dtype=np.float64),
+    )
+
+  # ── Group Z-Score ─────────────────────────────────────────────────
+  #   BRAIN: group_zscore
+
+  def GROUP_ZSCORE(self, a: np.ndarray, group: np.ndarray) -> np.ndarray:
+    return alpha.GROUP_ZSCORE(
+      np.asarray(group, dtype=np.float64),
+      np.asarray(a, dtype=np.float64),
+    )
+
+  # ====================================================================
+  #  Element-wise Operators
+  # ====================================================================
+
+  def MAX(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    return np.maximum(a, b)
+
+  def MIN(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    return np.minimum(a, b)
 
   def ABS(self, a: np.ndarray) -> np.ndarray:
     return np.abs(a)
 
+  def LOG(self, a: np.ndarray) -> np.ndarray:
+    return np.log(a)
+
   def SIGN(self, a: np.ndarray) -> np.ndarray:
     return np.sign(a)
+
+  def SIGNEDPOWER(self, a: np.ndarray, p) -> np.ndarray:
+    return np.sign(a) * np.power(np.abs(a), p)
+
+  def FILTER(self, a: np.ndarray, cond: np.ndarray) -> np.ndarray:
+    return np.where(cond, a, np.nan)
+
+  # ── Sanitization ───────────────────────────────────────────────────
+  #   BRAIN: pasteurize / purify, truncate / tail
+
+  def PASTEURIZE(self, a: np.ndarray) -> np.ndarray:
+    return np.where(np.isfinite(a), a, 0.0)
+
+  PURIFY = PASTEURIZE    # BRAIN alias
+
+  def TAIL(self, a: np.ndarray, limit: float = 3.0) -> np.ndarray:
+    return np.clip(a, -limit, limit)
+
+  TRUNCATE = TAIL        # BRAIN alias

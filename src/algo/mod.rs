@@ -1,12 +1,17 @@
 // Copyright 2026 MSD-RS Project LiJia
 // SPDX-License-Identifier: BSD-2-Clause
 
+mod backfill;
 mod context;
 mod cross;
 mod ema;
+mod entropy;
 mod error;
 mod extremum;
+mod group;
 mod ma;
+mod misc;
+mod moments;
 mod neutralize;
 mod rank;
 mod returns;
@@ -16,13 +21,19 @@ mod slope;
 mod stats;
 mod stddev;
 mod sum;
+mod zscore;
 
+pub use backfill::*;
 pub use context::Context;
 pub use cross::*;
 pub use ema::*;
+pub use entropy::*;
 pub use error::Error;
 pub use extremum::*;
+pub use group::*;
 pub use ma::*;
+pub use misc::*;
+pub use moments::*;
 pub use neutralize::*;
 pub use rank::*;
 pub use returns::*;
@@ -31,6 +42,7 @@ pub use slope::*;
 pub use stats::*;
 pub use stddev::*;
 pub use sum::*;
+pub use zscore::*;
 
 pub use num_traits::Float;
 
