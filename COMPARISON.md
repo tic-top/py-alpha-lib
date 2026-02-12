@@ -1,50 +1,24 @@
 # Benchmark Report
 
-基于 `comparison_all.csv` 三方对比（pandas / alpha-lib / polars_ta）的分析报告。
+## 目录
 
-## 修复记录
+- [WorldQuant Alpha 101](#worldquant-alpha-101)
+  - [正确性总览](#正确性总览)
+  - [正确性分析](#正确性分析)
+  - [性能对比](#alpha101-性能对比)
+- [GTJA 191](#gtja-191)
+  - [总览](#gtja-191-总览)
+  - [性能](#gtja-191-性能)
+  - [DSL 修复记录](#dsl-修复记录)
+- [附录：Bug 修复记录](#附录bug-修复记录)
 
-对比测试过程中发现并修复的 bug。这些都是算法 / 代码生成层面的错误，无法通过 `FLAG_SKIP_NAN` 或 `FLAG_STRICTLY_CYCLE` 等运行时参数规避。
+---
 
-| # | Commit | 修复项 | 一致因子数 | 根因 |
-|---|---|---|---|---|
-| 1 | `7013001` | 转译器运算符优先级 + 浮点窗口取整 | 27 → 41 | 代码生成 bug |
-| 2 | `9cf9fef` | SIGNEDPOWER 语义 | 41 → 43 | 数学定义错误 |
-| 3 | `bd428a3` | RANK 跨截面 NaN 处理 | 43 → 44 | 截面算法 bug |
-| 4 | `f8729bf` | TS_RANK 重复值处理 | 44 → 47 | 数据结构 bug |
-| 5 | `def3ddd` | Float::is_normal() 替换 | — | 正确性 bug |
+## WorldQuant Alpha 101
 
-### 1. 转译器运算符优先级 + 浮点窗口取整
+基于 `comparison_all.csv` 三方对比（pandas / alpha-lib / polars_ta）。
 
-**转译器生成的 Python 代码缺少括号**，导致表达式语义错误。例如 `(close - open) / open` 被生成为 `close - open / open`（先算 `open / open`）。同时，DSL 中的浮点窗口参数（如 `correlation(x, y, 8.93345)`）未取整，传入 Rust 后截断为 8 而非四舍五入到 9。
-
-修复：在 `to_python.py` 的 `sum`/`product`/比较运算生成时加括号；`arguments()` 方法对浮点参数四舍五入。
-
-### 2. SIGNEDPOWER 语义
-
-`SIGNEDPOWER(x, p)` 定义为 `sign(x) * |x|^p`，但 wq101 的 context 实现为 `np.power(x, p)`。当 `x < 0` 且 `p` 为非整数时，`np.power` 返回 NaN。
-
-修复：`alpha101_context.py` 中改为 `np.sign(a) * np.power(np.abs(a), p)`。
-
-### 3. RANK 跨截面 NaN 处理
-
-`ta_rank` 将 NaN 纳入排名分母计算，导致排名百分比偏低。pandas 的 `rank(pct=True)` 默认跳过 NaN。注意：这是截面操作，`FLAG_SKIP_NAN` 仅控制滚动窗口行为，不影响截面算子。
-
-修复：`rank.rs` 中 NaN 输入产生 NaN 输出，排名分母只计有效值。
-
-### 4. TS_RANK 重复值处理
-
-`ta_ts_rank` 使用 `BTreeMap<OrderedFloat, usize>` 作为滑动窗口，**相同浮点值会覆盖之前的条目**，导致窗口大小错误和排名计算偏差。
-
-修复：改用 `BTreeMap<OrderedFloat, u32>` 计数器 + 独立 NaN 计数，采用 min-rank 方法（与 pandas `rankdata(method='min')` 一致）。
-
-### 5. Float::is_normal() 替换
-
-Rust 标准库 `Float::is_normal()` 对 `0.0` 和次正规数返回 `false`，导致 MA / STDDEV / CORR / COV / LWMA 等算子将 `0.0` 误判为无效值并跳过。
-
-修复：定义 `fn is_normal(a) -> bool { !a.is_nan() }`，替换所有 `is_normal()` 调用。影响 5 个 Rust 源文件（ma.rs, stddev.rs, stats.rs, ema.rs, slope.rs）。
-
-## 总览
+### 正确性总览
 
 | 类别 | 数量 |
 |---|---|
@@ -60,7 +34,18 @@ Rust 标准库 `Float::is_normal()` 对 `0.0` 和次正规数返回 `false`，�
 | 其他（alpha_023/062 pandas 缺失） | 2 |
 | **合计** | **101** (alpha-lib 全部支持) |
 
-## 完全一致（47 个）
+### 结论
+
+Alpha-lib 的 Rust 实现在所有已实现因子上**数学计算正确**，符合 Alpha 101 论文定义。与 pandas 参考实现的差异来源于：
+
+1. **暖窗期设计选择**：alpha-lib 返回部分结果 vs pandas 返回 NaN（可通过 `FLAG_STRICTLY_CYCLE` 切换）
+2. **Pandas 参考 bug**：3 个因子公式错误
+3. **NaN 传播策略**：alpha-lib 正确传播，pandas 做了填充预处理
+4. **浮点精度**：极端小窗口下不可避免
+
+### 正确性分析
+
+#### 完全一致（47 个）
 
 pearson ≥ 0.99 或 ic_mean ≥ 0.99，公式与 Alpha101 论文一致。
 
@@ -68,11 +53,11 @@ pearson ≥ 0.99 或 ic_mean ≥ 0.99，公式与 Alpha101 论文一致。
 
 另有 alpha_024 (pearson=0.978, ic=0.982) 属于高度一致。
 
-## 常量输出（6 个）
+#### 常量输出（6 个）
 
 输出为常量或方差极小，无法计算 pearson，三方一致：021, 027, 057, 068, 083, 086
 
-## 暖窗期行为差异（8 个）
+#### 暖窗期行为差异（8 个）
 
 Alpha-lib 在滚动窗口未满时返回部分计算结果，pandas 返回 NaN。**这是设计选择，不是 bug。** Alpha-lib 提供了更多有效数据。
 
@@ -91,7 +76,7 @@ Alpha-lib 在滚动窗口未满时返回部分计算结果，pandas 返回 NaN�
 
 另有 alpha_043 (p=0.903), alpha_055 (p=0.978), alpha_094 (p=0.585) 也受暖窗期影响。
 
-## Pandas 参考实现 Bug（3 个）
+#### Pandas 参考实现 Bug（3 个）
 
 以下 pandas 参考实现有公式错误，**alpha-lib 是正确的**。
 
@@ -101,7 +86,7 @@ Alpha-lib 在滚动窗口未满时返回部分计算结果，pandas 返回 NaN�
 | alpha_036 | `sma(close,200)/200` 双重除以200 | al_vs_pt spearman=0.998 |
 | alpha_047 | `sma(high,5)/5` = sum/25，应为 sum/5 | **al_vs_pt pearson=1.0** |
 
-## decay_linear NaN 处理差异（3 个）
+#### decay_linear NaN 处理差异（3 个）
 
 Pandas 在 LWMA 前做 `ffill().bfill().fillna(0)` 预处理，alpha-lib 正确传播 NaN。
 
@@ -111,17 +96,25 @@ Pandas 在 LWMA 前做 `ffill().bfill().fillna(0)` 预处理，alpha-lib 正确�
 | alpha_072 | 0.020 | 分子分母均含 decay_linear |
 | alpha_098 | 0.736 | 嵌套 decay_linear |
 
-## 浮点精度（1 个）
+#### 浮点精度（1 个）
 
 | Factor | pearson (pd_vs_al) | 说明 |
 |---|---|---|
 | alpha_045 | 0.915 | `corr(x, y, 2)` 窗口=2 时值集中在 ±1 附近，1e-6 级 FP 差异导致截面排名不稳定。三方实现互相也不一致 (pd_vs_pt=0.926) |
 
-## 运行时间对比
+#### IndNeutralize 因子（19 个）
+
+以下因子使用 `INDNEUTRALIZE(expr, IndClass.xxx)` 行业中性化，此前未实现，现已全部支持：
+
+048, 056, 058, 059, 063, 067, 069, 070, 076, 079, 080, 082, 087, 089, 090, 091, 093, 097, 100
+
+这些因子的 pandas 参考实现也缺失（未支持行业分类数据），因此无法做正确性对比。
+
+### Alpha101 性能对比
 
 测试数据：4000 只股票 × 261 个交易日 = 1,044,000 行
 
-### 数据加载
+#### 数据加载
 
 | 实现 | 加载方式 | 耗时 |
 |---|---|---|
@@ -129,7 +122,7 @@ Pandas 在 LWMA 前做 `ffill().bfill().fillna(0)` 预处理，alpha-lib 正确�
 | polars_ta | pl.read_csv | ~300ms |
 | **alpha-lib** | **pl.read_csv** | **226ms** |
 
-### 因子计算
+#### 因子计算汇总
 
 | 实现 | 因子数 | 计算耗时 | 均值 | 中位数 | vs pandas |
 |---|---|---|---|---|---|
@@ -137,7 +130,10 @@ Pandas 在 LWMA 前做 `ffill().bfill().fillna(0)` 预处理，alpha-lib 正确�
 | polars_ta | 81 | 58,130ms (58s) | 718ms | 424ms | **45x** |
 | **alpha-lib** | **101** | **3,628ms (3.6s)** | **36ms** | **40ms** | **729x** |
 
-### 逐因子对比（alpha-lib vs pandas）
+含 `ts_rank` / `correlation` 长窗口操作的因子加速比 **1,000x - 7,000x**，简单因子 **2x - 100x**。
+
+<details>
+<summary>逐因子耗时明细（alpha-lib vs pandas）</summary>
 
 | Factor | alpha-lib | pandas | 加速比 |
 |---|---|---|---|
@@ -243,71 +239,15 @@ Pandas 在 LWMA 前做 `ffill().bfill().fillna(0)` 预处理，alpha-lib 正确�
 | alpha_100 | 100ms | - | - |
 | alpha_101 | 9ms | 297ms | 34x |
 
-含 `ts_rank` / `correlation` 长窗口操作的因子加速比 **1,000x - 7,000x**，简单因子 **2x - 100x**。
-
-### 新增 IndNeutralize 因子（19 个）
-
-以下因子使用 `INDNEUTRALIZE(expr, IndClass.xxx)` 行业中性化，此前未实现，现已全部支持：
-
-048, 056, 058, 059, 063, 067, 069, 070, 076, 079, 080, 082, 087, 089, 090, 091, 093, 097, 100
-
-这些因子的 pandas 参考实现也缺失（未支持行业分类数据），因此无法做正确性对比。
-
-## Python 层 dtype 处理优化
-
-### 问题
-
-原始代码在 Python wrapper（`algo_gen.py`）中对所有输入无条件调用 `.astype(float)`：
-
-```python
-# 旧代码 (algo_gen.py, build.rs 自动生成)
-a = a.astype(float)    # 即使 a 已经是 float64，仍然 copy 一份
-b = b.astype(float)    # 每次调用都有不必要的内存分配
-```
-
-问题：
-1. **无条件 copy**：即使输入已经是 float64，`.astype(float)` 仍然创建一份新数组
-2. **float32 被静默升级**：Rust 端原生支持 f32，但 Python 层在入口处就转成了 f64，浪费了 f32 零拷贝能力
-
-### 修复
-
-引入 `_to_f64()` 替代 `.astype(float)`，统一所有输入为 float64，但对已经是 float64 的输入做零拷贝：
-
-```python
-# 新代码 (build.rs 生成)
-def _to_f64(a):
-    if a.dtype == np.float64:
-        return a                  # zero-copy，直接返回
-    return a.astype(np.float64)   # int/bool/f32 → f64
-```
-
-| 输入 dtype | 旧行为 | 新行为 |
-|---|---|---|
-| float64 | `.astype(float)` → copy | `_to_f64()` → **zero-copy** |
-| float32 | `.astype(float)` → copy 到 f64 | `.astype(np.float64)` → copy 到 f64 |
-| int64/bool | `.astype(float)` → copy 到 f64 | `.astype(np.float64)` → copy 到 f64 |
-
-设计决策：统一 float64 输出，不保留 f32 中间结果。原因：
-- 复杂因子（如 `CORR(RANK(CLOSE), RANK(VOLUME), 10)`）的多输入函数必须 dtype 一致
-- CORR/COV/REGBETA 等累加运算在 f32 下精度损失显著
-- 混合 f32/f64 中间结果增加调试复杂度，无实际收益
-
-## 结论
-
-Alpha-lib 的 Rust 实现在所有已实现因子上**数学计算正确**，符合 Alpha 101 论文定义。与 pandas 参考实现的差异来源于：
-
-1. **暖窗期设计选择**：alpha-lib 返回部分结果 vs pandas 返回 NaN（可通过 `FLAG_STRICTLY_CYCLE` 切换）
-2. **Pandas 参考 bug**：3 个因子公式错误
-3. **NaN 传播策略**：alpha-lib 正确传播，pandas 做了填充预处理
-4. **浮点精度**：极端小窗口下不可避免
+</details>
 
 ---
 
-# GTJA 191 Benchmark Report
+## GTJA 191
 
 国泰君安 191 因子集运行报告。
 
-## 总览
+### GTJA 191 总览
 
 | 类别 | 数量 |
 |---|---|
@@ -315,47 +255,11 @@ Alpha-lib 的 Rust 实现在所有已实现因子上**数学计算正确**，符
 | 不可计算 | 1 |
 | **合计** | **191** |
 
-## DSL 修复记录
+不可计算因子：**#030** — 需要 Fama-French 三因子数据（MKT, SMB, HML），数据集不含此类数据。
 
-原始 GTJA 191 论文的公式存在多处歧义和错误，以下为修复项：
-
-| # | 原始问题 | 修复 |
-|---|---|---|
-| #010 | `MAX(expr, 5)` 歧义（element-wise vs rolling） | `MAX` → `TSMAX` |
-| #021 | `SEQUENCE(6)` 被解析为函数调用 | `SEQUENCE(6)` → `SEQUENCE,6`（作为 REGBETA 第三参数） |
-| #054 | `STD(ABS(CLOSE-OPEN))` 缺少窗口参数 | 补窗口 → `STD(ABS(CLOSE-OPEN), 10)` |
-| #127 | `MEAN(...)` 缺窗口 + `MAX(CLOSE,12)` 歧义 | `MEAN(..., 12)` + `MAX` → `TSMAX` |
-| #147 | 同 #021 | `SEQUENCE(12)` → `SEQUENCE,12` |
-| #165 | `MAX/MIN(SUMAC(...))` 缺窗口 | `SUMAC` → `SUM(...,48)`, `MAX/MIN` → `TSMAX/TSMIN(...,48)` |
-| #181 | 尾部 `SUM(...)` 缺窗口 | 补窗口 → `SUM(..., 20)` |
-| #183 | 同 #165 模式 | `SUMAC` → `SUM(...,24)`, `MAX/MIN` → `TSMAX/TSMIN(...,24)` |
-| #190 | `DELAY(CLOSE)` 缺少周期参数 | `DELAY(CLOSE)` → `DELAY(CLOSE,1)`（4 处） |
-
-## SUMIF / SCAN bool 类型修复
-
-`build.rs` 代码生成器对 3-array 签名函数（如 `ta_sumif`、`ta_scan_mul`、`ta_scan_add`）的 Python wrapper 无差别调用 `_to_f64()`，将 `bool` 条件数组转为 `float64`，但 Rust FFI 要求 `condition` 为 `bool` 数组，导致运行时报错。
-
-修复：`build.rs` 中 `build_algo_py()` 新增 `py_convert()` / `py_convert_list()` 辅助函数，根据参数的 `TaType`（`NumArray` vs `BoolArray`）生成 `_to_f64()` 或 `_to_bool()` 调用。生成的 `algo_gen.py` 同步新增 `_to_bool()` helper。
-
-## SELF 递归算子
-
-#143 使用 `SELF` 递归引用：`CLOSE>DELAY(CLOSE,1)?(CLOSE-DELAY(CLOSE,1))/DELAY(CLOSE,1)*SELF:SELF`，含义为条件累积乘。
-
-实现：
-- **Rust**: `ta_scan_mul` / `ta_scan_add`（`src/algo/scan.rs`）— 股内串行扫描，股间 rayon 并行
-- **DSL**: 语法新增 `SELF` 终端，转译器模式匹配 `cond ? expr*SELF : SELF` → `ctx.SCAN_MUL(expr, cond)`
-- **ExecContext**: `SCAN_MUL` / `SCAN_ADD` 方法
-
-## 不可计算因子（1 个）
-
-| # | 原因 |
-|---|---|
-| #030 | 需要 Fama-French 三因子数据（MKT, SMB, HML），数据集不含此类数据 |
-## 运行时间
+### GTJA 191 性能
 
 测试数据：4000 只股票 × 261 个交易日 = 1,044,000 行
-
-### 汇总
 
 | 指标 | 值 |
 |---|---|
@@ -365,7 +269,8 @@ Alpha-lib 的 Rust 实现在所有已实现因子上**数学计算正确**，符
 | 均值 | 24ms |
 | 中位数 | 18ms |
 
-### 逐因子耗时
+<details>
+<summary>逐因子耗时明细</summary>
 
 | Factor | 耗时 | | Factor | 耗时 | | Factor | 耗时 |
 |---|---|---|---|---|---|---|---|
@@ -433,3 +338,110 @@ Alpha-lib 的 Rust 实现在所有已实现因子上**数学计算正确**，符
 | #063 | 17ms | | #126 | 5ms | | #189 | 7ms |
 | #064 | 36ms | | #127 | 15ms | | #190 | 101ms |
 | | | | | | | #191 | 7ms |
+
+</details>
+
+### DSL 修复记录
+
+原始 GTJA 191 论文的公式存在多处歧义和错误，以下为修复项：
+
+| # | 原始问题 | 修复 |
+|---|---|---|
+| #010 | `MAX(expr, 5)` 歧义（element-wise vs rolling） | `MAX` → `TSMAX` |
+| #021 | `SEQUENCE(6)` 被解析为函数调用 | `SEQUENCE(6)` → `SEQUENCE,6`（作为 REGBETA 第三参数） |
+| #054 | `STD(ABS(CLOSE-OPEN))` 缺少窗口参数 | 补窗口 → `STD(ABS(CLOSE-OPEN), 10)` |
+| #127 | `MEAN(...)` 缺窗口 + `MAX(CLOSE,12)` 歧义 | `MEAN(..., 12)` + `MAX` → `TSMAX` |
+| #147 | 同 #021 | `SEQUENCE(12)` → `SEQUENCE,12` |
+| #165 | `MAX/MIN(SUMAC(...))` 缺窗口 | `SUMAC` → `SUM(...,48)`, `MAX/MIN` → `TSMAX/TSMIN(...,48)` |
+| #181 | 尾部 `SUM(...)` 缺窗口 | 补窗口 → `SUM(..., 20)` |
+| #183 | 同 #165 模式 | `SUMAC` → `SUM(...,24)`, `MAX/MIN` → `TSMAX/TSMIN(...,24)` |
+| #190 | `DELAY(CLOSE)` 缺少周期参数 | `DELAY(CLOSE)` → `DELAY(CLOSE,1)`（4 处） |
+
+---
+
+## 附录：Bug 修复记录
+
+对比测试过程中发现并修复的 bug。
+
+| # | Commit | 修复项 | 一致因子数 | 根因 |
+|---|---|---|---|---|
+| 1 | `7013001` | 转译器运算符优先级 + 浮点窗口取整 | 27 → 41 | 代码生成 bug |
+| 2 | `9cf9fef` | SIGNEDPOWER 语义 | 41 → 43 | 数学定义错误 |
+| 3 | `bd428a3` | RANK 跨截面 NaN 处理 | 43 → 44 | 截面算法 bug |
+| 4 | `f8729bf` | TS_RANK 重复值处理 | 44 → 47 | 数据结构 bug |
+| 5 | `def3ddd` | Float::is_normal() 替换 | — | 正确性 bug |
+
+<details>
+<summary>详细修复说明</summary>
+
+### 1. 转译器运算符优先级 + 浮点窗口取整
+
+**转译器生成的 Python 代码缺少括号**，导致表达式语义错误。例如 `(close - open) / open` 被生成为 `close - open / open`（先算 `open / open`）。同时，DSL 中的浮点窗口参数（如 `correlation(x, y, 8.93345)`）未取整，传入 Rust 后截断为 8 而非四舍五入到 9。
+
+修复：在 `to_python.py` 的 `sum`/`product`/比较运算生成时加括号；`arguments()` 方法对浮点参数四舍五入。
+
+### 2. SIGNEDPOWER 语义
+
+`SIGNEDPOWER(x, p)` 定义为 `sign(x) * |x|^p`，但 wq101 的 context 实现为 `np.power(x, p)`。当 `x < 0` 且 `p` 为非整数时，`np.power` 返回 NaN。
+
+修复：`alpha101_context.py` 中改为 `np.sign(a) * np.power(np.abs(a), p)`。
+
+### 3. RANK 跨截面 NaN 处理
+
+`ta_rank` 将 NaN 纳入排名分母计算，导致排名百分比偏低。pandas 的 `rank(pct=True)` 默认跳过 NaN。注意：这是截面操作，`FLAG_SKIP_NAN` 仅控制滚动窗口行为，不影响截面算子。
+
+修复：`rank.rs` 中 NaN 输入产生 NaN 输出，排名分母只计有效值。
+
+### 4. TS_RANK 重复值处理
+
+`ta_ts_rank` 使用 `BTreeMap<OrderedFloat, usize>` 作为滑动窗口，**相同浮点值会覆盖之前的条目**，导致窗口大小错误和排名计算偏差。
+
+修复：改用 `BTreeMap<OrderedFloat, u32>` 计数器 + 独立 NaN 计数，采用 min-rank 方法（与 pandas `rankdata(method='min')` 一致）。
+
+### 5. Float::is_normal() 替换
+
+Rust 标准库 `Float::is_normal()` 对 `0.0` 和次正规数返回 `false`，导致 MA / STDDEV / CORR / COV / LWMA 等算子将 `0.0` 误判为无效值并跳过。
+
+修复：定义 `fn is_normal(a) -> bool { !a.is_nan() }`，替换所有 `is_normal()` 调用。影响 5 个 Rust 源文件（ma.rs, stddev.rs, stats.rs, ema.rs, slope.rs）。
+
+### SUMIF / SCAN bool 类型修复
+
+`build.rs` 代码生成器对 3-array 签名函数（如 `ta_sumif`、`ta_scan_mul`、`ta_scan_add`）的 Python wrapper 无差别调用 `_to_f64()`，将 `bool` 条件数组转为 `float64`，但 Rust FFI 要求 `condition` 为 `bool` 数组，导致运行时报错。
+
+修复：`build.rs` 中 `build_algo_py()` 新增 `py_convert()` / `py_convert_list()` 辅助函数，根据参数的 `TaType`（`NumArray` vs `BoolArray`）生成 `_to_f64()` 或 `_to_bool()` 调用。
+
+### SELF 递归算子
+
+#143 使用 `SELF` 递归引用：`CLOSE>DELAY(CLOSE,1)?(CLOSE-DELAY(CLOSE,1))/DELAY(CLOSE,1)*SELF:SELF`，含义为条件累积乘。
+
+实现：
+- **Rust**: `ta_scan_mul` / `ta_scan_add`（`src/algo/scan.rs`）— 股内串行扫描，股间 rayon 并行
+- **DSL**: 语法新增 `SELF` 终端，转译器模式匹配 `cond ? expr*SELF : SELF` → `ctx.SCAN_MUL(expr, cond)`
+- **ExecContext**: `SCAN_MUL` / `SCAN_ADD` 方法
+
+### Python 层 dtype 处理优化
+
+原始代码在 Python wrapper（`algo_gen.py`）中对所有输入无条件调用 `.astype(float)`：
+
+```python
+# 旧代码 (algo_gen.py, build.rs 自动生成)
+a = a.astype(float)    # 即使 a 已经是 float64，仍然 copy 一份
+b = b.astype(float)    # 每次调用都有不必要的内存分配
+```
+
+引入 `_to_f64()` 替代 `.astype(float)`，统一所有输入为 float64，但对已经是 float64 的输入做零拷贝：
+
+```python
+def _to_f64(a):
+    if a.dtype == np.float64:
+        return a                  # zero-copy
+    return a.astype(np.float64)   # int/bool/f32 → f64
+```
+
+| 输入 dtype | 旧行为 | 新行为 |
+|---|---|---|
+| float64 | `.astype(float)` → copy | `_to_f64()` → **zero-copy** |
+| float32 | `.astype(float)` → copy 到 f64 | `.astype(np.float64)` → copy 到 f64 |
+| int64/bool | `.astype(float)` → copy 到 f64 | `.astype(np.float64)` → copy 到 f64 |
+
+</details>
