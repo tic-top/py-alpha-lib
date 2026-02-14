@@ -19,34 +19,14 @@ See [COMPARISON.md](COMPARISON.md) for per-factor timing and correctness analysi
 ## Installation
 
 ```bash
-pip install py-alpha-lib
+pip install git+https://github.com/msd-rs/py-alpha-lib.git
 ```
 
-## Quick Start
+> Requires Rust toolchain installed — `pip` will invoke `maturin` to compile the Rust extension automatically.
 
-```python
-import alpha
-import numpy as np
+## Usage
 
-data = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], dtype=np.float64)
-
-# 3-period moving average (partial results during warm-up)
-result = alpha.MA(data, 3)
-# [1.  1.5 2.  3.  4.  5.  6.  7.  8.  9.]
-
-# Strict mode: NaN until window is full
-alpha.set_ctx(flags=alpha.FLAG_STRICTLY_CYCLE)
-result = alpha.MA(data, 3)
-# [nan nan 2.  3.  4.  5.  6.  7.  8.  9.]
-
-# Skip NaN values
-alpha.set_ctx(flags=alpha.FLAG_SKIP_NAN)
-data_nan = np.array([1, 2, np.nan, 4, 5, 6, 7, 8, 9, 10], dtype=np.float64)
-result = alpha.MA(data_nan, 3)
-# [1.  1.5 nan 3.  4.5 5.  6.  7.  8.  9.]
-```
-
-## Context Settings
+### Context Settings
 
 Control computation behavior via `alpha.set_ctx()`:
 
@@ -57,7 +37,102 @@ Control computation behavior via `alpha.set_ctx()`:
   - `FLAG_STRICTLY_CYCLE` (2): Return NaN until window is full (matches pandas `rolling()` default).
   - Combine with `|`: `flags=FLAG_SKIP_NAN | FLAG_STRICTLY_CYCLE`
 
-## Algorithms
+  ```python
+  import alpha
+  import numpy as np
+
+  data = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], dtype=np.float64)
+
+  # 3-period moving average (partial results during warm-up)
+  result = alpha.MA(data, 3)
+  # [1.  1.5 2.  3.  4.  5.  6.  7.  8.  9.]
+
+  # Strict mode: NaN until window is full
+  alpha.set_ctx(flags=alpha.FLAG_STRICTLY_CYCLE)
+  result = alpha.MA(data, 3)
+  # [nan nan 2.  3.  4.  5.  6.  7.  8.  9.]
+
+  # Skip NaN values
+  alpha.set_ctx(flags=alpha.FLAG_SKIP_NAN)
+  data_nan = np.array([1, 2, np.nan, 4, 5, 6, 7, 8, 9, 10], dtype=np.float64)
+  result = alpha.MA(data_nan, 3)
+  # [1.  1.5 nan 3.  4.5 5.  6.  7.  8.  9.]
+  ```
+
+
+### Example 1: Plug and Play
+
+```python
+import alpha
+from alpha.context import ExecContext
+
+# ExecContext auto-infers groups from securityid/tradetime columns
+# and calls alpha.set_ctx(groups=...) automatically
+data = pl.read_csv("data.csv").sort(["securityid", "tradetime"])
+ctx = ExecContext(data)
+
+# Call operators directly on numpy arrays
+close = data["close"].to_numpy()
+ma20 = alpha.MA(close, 20)
+rank = alpha.RANK(close)       # cross-sectional rank (groups auto-configured)
+corr = alpha.CORR(close, data["vol"].to_numpy().astype(float), 10)
+```
+
+Data layout: flat 1D array `[stock1_day1, stock1_day2, ..., stockN_dayM]`, sorted by security then time. The `groups` parameter tells the library where each stock's data begins.
+
+
+### Example 2: Factor Expression Transpiler
+
+Convert factor expressions to Python code, then run:
+
+```bash
+python -m alpha.lang examples/wq101/alpha101.txt
+```
+
+```python
+# 3. Use generated code
+from alpha.context import ExecContext
+from factors import alpha_001
+
+data = pl.read_csv("data.csv").sort(["securityid", "tradetime"])
+ctx = ExecContext(data)  # auto-infers groups
+result = alpha_001(ctx)
+```
+
+## Benchmarking
+
+### GTJA Alpha 191
+
+Implementation of 190/191 factors from the GTJA (国泰君安) Alpha 191 factor set in [`examples/gtja191/`](examples/gtja191/):
+
+| Metric | Value |
+|---|---|
+| Computable | 190 / 191 |
+| Compute time | ~4.5s (4000 stocks × 261 days) |
+| Avg per factor | 24ms |
+
+```bash
+python -m examples.gtja191.al 143     # run specific factor
+python -m examples.gtja191.al          # run all factors
+```
+
+### WorldQuant Alpha 101
+
+Full implementation of [101 Formulaic Alphas](https://arxiv.org/pdf/1601.00991.pdf) in [`examples/wq101/`](examples/wq101/):
+
+- `al/` — alpha-lib implementation (Rust backend)
+- `pd_/` — pandas reference (DolphinDB port)
+- `pl_/` — polars_ta reference
+
+```bash
+examples/wq101/main.py --with-al 1 2 3 4 # Run specific factors
+examples/wq101/main.py --with-al -s 1 -e 102 # Run all factors
+examples/wq101/main.py --with-pd --with-al -s 1 -e 15 # Compare with pandas
+```
+
+Benchmark scripts in [`benchmarks/`](benchmarks/).
+
+### Supported Algorithms
 
 | Name | Description |
 |---|---|
@@ -111,137 +186,6 @@ Control computation behavior via `alpha.set_ctx()`:
 
 Full function signatures: [python/alpha/algo.md](python/alpha/algo.md)
 
-## Factor Expression Transpiler
-
-Convert factor expressions to Python code:
-
-```bash
-python -m alpha.lang examples/wq101/alpha101.txt
-```
-
-Reads expressions from [`examples/wq101/alpha101.txt`](examples/wq101/alpha101.txt) and generates Python code using alpha-lib functions.
-
-## GTJA Alpha 191
-
-Implementation of 190/191 factors from the GTJA (国泰君安) Alpha 191 factor set in [`examples/gtja191/`](examples/gtja191/):
-
-| Metric | Value |
-|---|---|
-| Computable | 190 / 191 |
-| Compute time | ~4.5s (4000 stocks × 261 days) |
-| Avg per factor | 24ms |
-
-```bash
-python -m examples.gtja191.al 143     # run specific factor
-python -m examples.gtja191.al          # run all factors
-```
-
-## WorldQuant Alpha 101
-
-Full implementation of [101 Formulaic Alphas](https://arxiv.org/pdf/1601.00991.pdf) in [`examples/wq101/`](examples/wq101/):
-
-- `al/` — alpha-lib implementation (Rust backend)
-- `pd_/` — pandas reference (DolphinDB port)
-- `pl_/` — polars_ta reference
-
-```bash
-# Run specific factors
-examples/wq101/main.py --with-al 1 2 3 4
-
-# Run all factors
-examples/wq101/main.py --with-al -s 1 -e 102
-
-# Compare with pandas
-examples/wq101/main.py --with-pd --with-al -s 1 -e 15
-```
-
-Benchmark scripts in [`benchmarks/`](benchmarks/).
-
-## Using in Your Project
-
-### Install from PyPI
-
-```bash
-pip install py-alpha-lib
-```
-
-Or add to `requirements.txt`:
-
-```
-py-alpha-lib>=0.1.2
-```
-
-### Install from Source (GitHub)
-
-```bash
-pip install git+https://github.com/msd-rs/py-alpha-lib.git
-```
-
-Or in `requirements.txt`:
-
-```
-py-alpha-lib @ git+https://github.com/msd-rs/py-alpha-lib.git
-```
-
-Pin to a specific commit:
-
-```
-py-alpha-lib @ git+https://github.com/msd-rs/py-alpha-lib.git@main
-```
-
-> Requires Rust toolchain installed — `pip` will invoke `maturin` to compile the Rust extension automatically.
-
-### Plug and Play
-
-```python
-import alpha
-from alpha.context import ExecContext
-
-# ExecContext auto-infers groups from securityid/tradetime columns
-# and calls alpha.set_ctx(groups=...) automatically
-data = pl.read_csv("data.csv").sort(["securityid", "tradetime"])
-ctx = ExecContext(data)
-
-# Call operators directly on numpy arrays
-close = data["close"].to_numpy()
-ma20 = alpha.MA(close, 20)
-rank = alpha.RANK(close)       # cross-sectional rank (groups auto-configured)
-corr = alpha.CORR(close, data["vol"].to_numpy().astype(float), 10)
-```
-
-### Transpiler Workflow
-
-```bash
-# 1. Write factor expressions (WorldQuant syntax)
-cat factors.txt
-# Alpha#001: (rank(Ts_ArgMax(SignedPower(((returns < 0) ? stddev(returns, 20) : close), 2.), 5)) - 0.5)
-
-# 2. Transpile to Python
-python -m alpha.lang factors.txt > factors.py
-```
-
-```python
-# 3. Use generated code
-from alpha.context import ExecContext
-from factors import alpha_001
-
-data = pl.read_csv("data.csv").sort(["securityid", "tradetime"])
-ctx = ExecContext(data)  # auto-infers groups
-result = alpha_001(ctx)
-```
-
-### List API (Single Security)
-
-```python
-import alpha
-import numpy as np
-
-# No groups needed for single-security time-series
-close = np.array([100, 102, 101, 105, 103], dtype=np.float64)
-ma3 = alpha.MA(close, 3)
-```
-
-Data layout: flat 1D array `[stock1_day1, stock1_day2, ..., stockN_dayM]`, sorted by security then time. The `groups` parameter tells the library where each stock's data begins.
 
 ## Development
 

@@ -76,3 +76,8 @@ dataPerformance.*
 
 .cargo/
 cargo.lock
+
+# mid-build files
+al_alpha101.csv
+al_timing.csv
+comparison_results.csv
