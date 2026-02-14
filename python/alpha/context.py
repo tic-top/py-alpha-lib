@@ -92,7 +92,7 @@ class ExecContext:
     - OHLCV data fields (OPEN, HIGH, LOW, CLOSE, VOLUME, VWAP)
     - Derived fields (RETURNS/RET, DTM, DBM, TR, HD, LD, SEQUENCE)
     - All operator methods used by wq101, gtja191, and WQ BRAIN transpiler output
-    - Dynamic ADV{n} access (average daily volume over n days)
+    - Dynamic ADV{n} access (average daily dollar volume over n days, per paper definition)
     - Variable aliases (AMOUNT=VOLUME, VOL=VOLUME)
 
   Args:
