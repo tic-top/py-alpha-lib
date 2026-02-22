@@ -1,6 +1,6 @@
 # alpha-lib
 
-High-performance quantitative finance algorithm library, implemented in Rust with Python bindings (PyO3).
+High-performance quantitative finance algorithm library, implemented in Rust with Python bindings ([PyO3](https://pyo3.rs/)).
 
 Provides efficient rolling-window calculations commonly used in factor-based quantitative trading.
 
@@ -14,15 +14,14 @@ Benchmarked on Alpha 101, 4000 stocks x 261 trading days (1,044,000 data points 
 | polars_ta | 81 | 0.3s | 58s | 58s | 46x |
 | **alpha-lib** | **101** | **0.3s** | **3.6s** | **3.9s** | **729x** |
 
-See [COMPARISON.md](COMPARISON.md) for per-factor timing and correctness analysis.
+See [COMPARISON.md](articles/COMPARISON.md) for per-factor timing and correctness analysis.
 
 ## Installation
 
 ```bash
-pip install git+https://github.com/msd-rs/py-alpha-lib.git
+pip install py-alpha-lib
 ```
 
-> Requires Rust toolchain installed — `pip` will invoke `maturin` to compile the Rust extension automatically.
 
 ## Usage
 
@@ -99,7 +98,22 @@ ctx = ExecContext(data)  # auto-infers groups
 result = alpha_001(ctx)
 ```
 
-## Benchmarking
+## Factor expression to Python code
+
+You can convert factor expressions to Python code using the `lang` module. For example:
+
+```bash
+python -m alpha.lang examples/wq101/alpha101.txt
+```
+
+This will read the factor expressions from [`examples/wq101/alpha101.txt`](examples/wq101/alpha101.txt) and generate corresponding Python code using `alpha-lib` functions.
+
+After generating the code, you may need to adjust the code
+
+- Fix type conversions between `float` and `bool`.
+- Add context settings if needed.
+
+## Benchmarking and Full Examples
 
 ### GTJA Alpha 191
 
@@ -205,3 +219,5 @@ cargo test
 ### Vibe Coding
 
 When adding new algorithms with LLM assistance, provide [the function list](python/alpha/algo.md) as context. Use the skill [add_algo.md](.agent/skills/add_algo.md) for guided implementation.
+
+This project is a co-created by `Gemini` (through [Antigravity](https://antigravity.google/)) and `Claude` (from [tic-top](https://github.com/tic-top/py-alpha-lib)).

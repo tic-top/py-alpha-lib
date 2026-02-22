@@ -1,5 +1,9 @@
 # ChangeLog
 
+## [0.1.3] - 2026-02-22
+
+
+@tic-top had verified the correctness of the computation, it's a great help for us to improve the quality of the alpha library. Thanks @tic-top!
 
 ## [0.1.2] - 2026-02-04
 
