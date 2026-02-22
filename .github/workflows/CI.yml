@@ -135,16 +135,29 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     needs: [linux, musllinux, windows, macos, sdist]
+    permissions:
+      # Use to sign the release artifacts
+      id-token: write
+      # Used to upload release artifacts
+      contents: write
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v7
         with:
           path: ./dist
           merge-multiple: true
+      - name: upload release to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Get Changelog Entry
+        id: changelog_reader
+        uses: mindsers/changelog-reader-action@v2
+        with:
+          validation_level: warn
+          version: ${{ steps.tag_name.outputs.current_version }}
+          path: ./CHANGELOG.md
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
-          generate_release_notes: true
-      - name: upload release to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+          body: ${{ steps.changelog_reader.outputs.changes }}
+          make_latest: true
