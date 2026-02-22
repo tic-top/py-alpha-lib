@@ -29,7 +29,25 @@ class AlphaTransformer(Transformer):
   def start(self, expr):
     return expr
 
+  def SELF(self, token):
+    return "__SELF__"
+
   def ternary_expr(self, cond, true_case, false_case):
+    if false_case == '__SELF__' and '__SELF__' in true_case:
+      # Detect (operand * __SELF__) pattern — product() produces "(A * B)" format
+      if true_case.startswith('(') and true_case.endswith(' * __SELF__)'):
+        operand = true_case[1:-len(' * __SELF__)')]
+        return f"ctx.SCAN_MUL({operand}, {cond})"
+      elif true_case.startswith('(__SELF__ * ') and true_case.endswith(')'):
+        operand = true_case[len('(__SELF__ * '):-1]
+        return f"ctx.SCAN_MUL({operand}, {cond})"
+      # Detect (operand + __SELF__) pattern
+      elif true_case.startswith('(') and true_case.endswith(' + __SELF__)'):
+        operand = true_case[1:-len(' + __SELF__)')]
+        return f"ctx.SCAN_ADD({operand}, {cond})"
+      elif true_case.startswith('(__SELF__ + ') and true_case.endswith(')'):
+        operand = true_case[len('(__SELF__ + '):-1]
+        return f"ctx.SCAN_ADD({operand}, {cond})"
     return f"np.where({cond}, {true_case}, {false_case})"
 
   def logical_or_expr(self, left, *rights):
@@ -45,28 +63,30 @@ class AlphaTransformer(Transformer):
     return result
 
   def eq(self, left, right):
-    return f"{left} == {right}"
+    return f"({left} == {right})"
 
   def ne(self, left, right):
-    return f"{left} != {right}"
+    return f"({left} != {right})"
 
   def lt(self, left, right):
-    return f"{left} < {right}"
+    return f"({left} < {right})"
 
   def gt(self, left, right):
-    return f"{left} > {right}"
+    return f"({left} > {right})"
 
   def le(self, left, right):
-    return f"{left} <= {right}"
+    return f"({left} <= {right})"
 
   def ge(self, left, right):
-    return f"{left} >= {right}"
+    return f"({left} >= {right})"
 
   def sum(self, first, *rest):
     result = first
     it = iter(rest)
     for op, val in zip(it, it):
       result = f"{result} {op} {val}"
+    if rest:
+      result = f"({result})"
     return result
 
   def product(self, first, *rest):
@@ -74,6 +94,8 @@ class AlphaTransformer(Transformer):
     it = iter(rest)
     for op, val in zip(it, it):
       result = f"{result} {op} {val}"
+    if rest:
+      result = f"({result})"
     return result
 
   def power(self, base, *rest):
@@ -93,7 +115,16 @@ class AlphaTransformer(Transformer):
     return f"ctx.{name}({args})"
 
   def arguments(self, *args):
-    return ", ".join(args)
+    rounded = []
+    for arg in args:
+      try:
+        val = float(arg)
+        if '.' in arg and val == val:
+          arg = str(round(val))
+      except (ValueError, TypeError):
+        pass
+      rounded.append(arg)
+    return ", ".join(rounded)
 
   def NAME(self, name):
     name = str(name)

@@ -1,5 +1,6 @@
 import alpha
 import time
+import polars as pl
 import pandas as pd
 import logging
 import numpy as np
@@ -14,12 +15,10 @@ logger = logging.getLogger("alpha_backend")
 def setup_context(data_path: str) -> tuple[ExecContext, int, int, int]:
   logger.info("Loading data")
   t1 = time.time()
-  data = pd.read_csv(data_path)
-  df = data.set_index(["securityid", "tradetime"])
-  security_count = df.index.get_level_values("securityid").value_counts().shape[0]
-  trade_count = df.index.get_level_values("tradetime").value_counts().shape[0]
-  alpha.set_ctx(groups=security_count)
-  ctx = ExecContext(df)
+  data = pl.read_csv(data_path).sort(["securityid", "tradetime"])
+  security_count = data["securityid"].n_unique()
+  trade_count = data["tradetime"].n_unique()
+  ctx = ExecContext(data)
   t2 = time.time()
   logger.info("Data loaded in %f seconds", t2 - t1)
   return ctx, trade_count, security_count, int((t2 - t1) * 1000)
@@ -37,9 +36,7 @@ def parse_args():
   return parser.parse_args()
 
 
-nofunc = set(
-  [48, 56, 58, 59, 63, 67, 69, 70, 76, 79, 80, 82, 87, 89, 90, 91, 93, 97, 100]
-)
+nofunc = set()
 
 
 def main(args):

@@ -50,6 +50,9 @@ impl<NumT: Float + Debug> Debug for OrderedFloat<NumT> {
 }
 
 /// Calculate rank in a sliding window with size `periods`
+///
+/// Uses min-rank method for ties (same as pandas rankdata method='min').
+/// NaN values are treated as larger than all non-NaN values.
 pub fn ta_ts_rank<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [NumT],
@@ -70,25 +73,60 @@ pub fn ta_ts_rank<NumT: Float + Send + Sync>(
     .for_each(|(r, x)| {
       let start = ctx.start(r.len());
       r.fill(NumT::nan());
-      let mut rank_window: BTreeMap<OrderedFloat<NumT>, usize> = BTreeMap::new();
+      // Track counts per unique value to handle duplicates correctly.
+      let mut rank_window: BTreeMap<OrderedFloat<NumT>, u32> = BTreeMap::new();
+      let mut nan_count: usize = 0;
+      let mut window_size: usize = 0;
+
       for i in start..x.len() {
-        let val = x[i].into();
-        if rank_window.len() < periods {
-          rank_window.insert(val, i);
+        let val = x[i];
+
+        // Add current value to window
+        if val.is_nan() {
+          nan_count += 1;
         } else {
-          rank_window.remove(&x[i - periods].into());
-          rank_window.insert(val, i);
+          *rank_window.entry(val.into()).or_insert(0) += 1;
+        }
+        window_size += 1;
+
+        // Remove oldest value if window exceeds periods
+        if window_size > periods {
+          let old_val = x[i - periods];
+          if old_val.is_nan() {
+            nan_count -= 1;
+          } else {
+            let old_key: OrderedFloat<NumT> = old_val.into();
+            if let Some(count) = rank_window.get_mut(&old_key) {
+              *count -= 1;
+              if *count == 0 {
+                rank_window.remove(&old_key);
+              }
+            }
+          }
+          window_size -= 1;
         }
 
-        let rank = rank_window
-          .iter()
-          .position(|v| val.eq(v.0))
-          .unwrap_or(rank_window.len() - 1)
-          + 1;
-        if ctx.is_strictly_cycle() && rank_window.len() < periods {
+        if ctx.is_strictly_cycle() && window_size < periods {
           continue;
         }
-        r[i] = NumT::from(rank).unwrap();
+
+        // Calculate rank
+        if val.is_nan() {
+          // NaN gets the highest rank in the window
+          r[i] = NumT::from(window_size).unwrap();
+        } else {
+          // Count all values strictly less than current (NaN treated as smallest)
+          let val_key: OrderedFloat<NumT> = val.into();
+          let mut less_count: usize = nan_count;
+          for (key, count) in rank_window.iter() {
+            if *key < val_key {
+              less_count += *count as usize;
+            } else {
+              break;
+            }
+          }
+          r[i] = NumT::from(less_count + 1).unwrap();
+        }
       }
     });
 
@@ -147,16 +185,36 @@ pub fn ta_rank<NumT: Float + Send + Sync + Debug>(
     rank_window.sort_by(|a, b| a.0.cmp(&b.0));
     let r = r.get();
 
-    let mut prev_rank_value = rank_window[0].0.value;
-    let mut s = 0;
-    let total = NumT::from(rank_window.len()).unwrap();
+    // OrderedFloat sorts NaN to the beginning (NaN < everything).
+    // Find where valid (non-NaN) values start.
+    let nan_count = rank_window
+      .iter()
+      .take_while(|v| v.0.value.is_nan())
+      .count();
+    let valid_count = rank_window.len() - nan_count;
+
+    // Assign NaN to NaN positions
+    for i in 0..nan_count {
+      r[rank_window[i].1] = NumT::nan();
+    }
+
+    if valid_count == 0 {
+      return;
+    }
+
+    let total = NumT::from(valid_count).unwrap();
+
+    // Rank only valid values (starting from nan_count)
+    let mut prev_rank_value = rank_window[nan_count].0.value;
+    let mut s = nan_count;
 
     // chunk by same value
-    for e in 0..rank_window.len() {
+    for e in nan_count..rank_window.len() {
       if prev_rank_value == rank_window[e].0.value {
         continue;
       }
-      let rank_avg = NumT::from(e + s + 1).unwrap() / NumT::from(2usize).unwrap();
+      let rank_avg = NumT::from(e - nan_count + s - nan_count + 1).unwrap()
+        / NumT::from(2usize).unwrap();
       for i in s..e {
         r[rank_window[i].1] = rank_avg / total;
       }
@@ -164,8 +222,9 @@ pub fn ta_rank<NumT: Float + Send + Sync + Debug>(
       prev_rank_value = rank_window[e].0.value;
     }
 
-    // the last chunk
-    let rank_avg = NumT::from(rank_window.len() + s + 1).unwrap() / NumT::from(2usize).unwrap();
+    // the last chunk of valid values
+    let rank_avg = NumT::from(valid_count + s - nan_count + 1).unwrap()
+      / NumT::from(2usize).unwrap();
     for i in s..rank_window.len() {
       r[rank_window[i].1] = rank_avg / total;
     }
@@ -345,6 +404,37 @@ mod tests {
   }
 
   #[test]
+  fn test_ta_ts_rank_duplicates() {
+    // Test that duplicate values in the window are handled correctly.
+    // The old BTreeMap<key, index> approach would lose duplicates.
+    let input = vec![1.0, 1.0, 2.0];
+    let mut r = vec![0.0; input.len()];
+    let ctx = Context::new(0, 0, 0);
+
+    ta_ts_rank(&ctx, &mut r, &input, 3).unwrap();
+    // Position 0: [1] -> rank of 1 is 1
+    // Position 1: [1, 1] -> rank of 1 is 1 (min rank for ties)
+    // Position 2: [1, 1, 2] -> rank of 2 is 3 (two 1s below it)
+    assert_vec_eq_nan(&r, &vec![1.0, 1.0, 3.0]);
+  }
+
+  #[test]
+  fn test_ta_ts_rank_duplicates_sliding() {
+    // Verify correct sliding window behavior when duplicates enter and leave.
+    let input = vec![3.0, 1.0, 2.0, 1.0, 3.0];
+    let mut r = vec![0.0; input.len()];
+    let ctx = Context::new(0, 0, 0);
+
+    ta_ts_rank(&ctx, &mut r, &input, 3).unwrap();
+    // Position 0: [3] -> rank 1
+    // Position 1: [3, 1] -> rank of 1 is 1
+    // Position 2: [3, 1, 2] -> rank of 2 is 2
+    // Position 3: [1, 2, 1] -> rank of 1 is 1 (min rank, two 1s and one 2)
+    // Position 4: [2, 1, 3] -> rank of 3 is 3
+    assert_vec_eq_nan(&r, &vec![1.0, 1.0, 2.0, 1.0, 3.0]);
+  }
+
+  #[test]
   fn test_ta_rank_same_value() {
     let input = vec![1.0, 2.0, 1.0];
     let mut r = vec![0.0; input.len()];
@@ -384,6 +474,30 @@ mod tests {
         2.0 / 3.0,
         3.0 / 3.0,
         3.0 / 3.0,
+      ],
+    );
+  }
+
+  #[test]
+  fn test_ta_rank_with_nan() {
+    // groups=3, matrix [3,NaN; 1,5; 4,6]
+    let input = vec![3.0, f64::NAN, 1.0, 5.0, 4.0, 6.0];
+    let mut r = vec![0.0; input.len()];
+    let ctx = Context::new(0, 3, 0);
+
+    ta_rank(&ctx, &mut r, &input).unwrap();
+    // j=0: values [3,1,4], all valid, sorted [1,3,4], ranks [2,1,3]
+    // j=1: values [NaN,5,6], 2 valid, sorted [5,6,NaN]
+    //   5 -> rank 1/2=0.5, 6 -> rank 2/2=1.0, NaN -> NaN
+    assert_vec_eq_nan(
+      &r,
+      &vec![
+        2.0 / 3.0,
+        f64::NAN,
+        1.0 / 3.0,
+        1.0 / 2.0,
+        3.0 / 3.0,
+        2.0 / 2.0,
       ],
     );
   }

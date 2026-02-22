@@ -85,14 +85,14 @@ pub fn ta_lwma<NumT: Float + Send + Sync>(
 
         for i in iter {
           let val = x[i.end];
-          if val.is_normal() {
+          if is_normal(&val) {
             weighted_sum = weighted_sum + n_t * val - simple_sum;
             simple_sum = simple_sum + val;
           }
 
           for k in i.prev_start..i.start {
             let old = x[k];
-            if old.is_normal() {
+            if is_normal(&old) {
               simple_sum = simple_sum - old;
             }
           }
@@ -135,7 +135,7 @@ pub fn ta_lwma<NumT: Float + Send + Sync>(
 
         for k in pre_fill_start..start {
           let val = x[k];
-          if val.is_normal() {
+          if is_normal(&val) {
             weighted_sum = weighted_sum + n_t * val - simple_sum;
             simple_sum = simple_sum + val;
           } else {
@@ -156,7 +156,7 @@ pub fn ta_lwma<NumT: Float + Send + Sync>(
           let val = x[i];
 
           // Add new
-          if val.is_normal() {
+          if is_normal(&val) {
             // Check if ANY NaN in window -> Result is NaN anyway.
             // So logic can be simplified?
             // We need to maintain sums correctly to recover when NaNs leave.
@@ -173,8 +173,8 @@ pub fn ta_lwma<NumT: Float + Send + Sync>(
             // So Yes, differential update works even with 0 insertion.
             // We just need to track if we should output NaN.
             weighted_sum =
-              weighted_sum + n_t * (if val.is_normal() { val } else { NumT::zero() }) - simple_sum;
-            simple_sum = simple_sum + (if val.is_normal() { val } else { NumT::zero() });
+              weighted_sum + n_t * (if is_normal(&val) { val } else { NumT::zero() }) - simple_sum;
+            simple_sum = simple_sum + (if is_normal(&val) { val } else { NumT::zero() });
           } else {
             nan_in_window += 1;
             // Shift happens
@@ -185,14 +185,14 @@ pub fn ta_lwma<NumT: Float + Send + Sync>(
           // Remove old
           if i >= periods {
             let old = x[i - periods];
-            if old.is_normal() {
+            if is_normal(&old) {
               simple_sum = simple_sum - old;
             } else {
               nan_in_window -= 1;
             }
           }
 
-          if nan_in_window > 0 || !val.is_normal() {
+          if nan_in_window > 0 || !is_normal(&val) {
             // Result NaN
           } else {
             if i >= periods - 1 {

@@ -50,14 +50,14 @@ pub fn ta_stddev<NumT: Float + Send + Sync>(
 
         for i in iter {
           let val = x[i.end];
-          if val.is_normal() {
+          if is_normal(&val) {
             sum = sum + val;
             sum_sq = sum_sq + val * val;
           }
 
           for k in i.prev_start..i.start {
             let old = x[k];
-            if old.is_normal() {
+            if is_normal(&old) {
               sum = sum - old;
               sum_sq = sum_sq - old * old;
             }
@@ -105,7 +105,7 @@ pub fn ta_stddev<NumT: Float + Send + Sync>(
 
         for k in pre_fill_start..start {
           let val = x[k];
-          if val.is_normal() {
+          if is_normal(&val) {
             sum = sum + val;
             sum_sq = sum_sq + val * val;
           } else {
@@ -116,7 +116,7 @@ pub fn ta_stddev<NumT: Float + Send + Sync>(
         for i in start..x.len() {
           let val = x[i];
 
-          if val.is_normal() {
+          if is_normal(&val) {
             sum = sum + val;
             sum_sq = sum_sq + val * val;
           } else {
@@ -125,7 +125,7 @@ pub fn ta_stddev<NumT: Float + Send + Sync>(
 
           if i >= periods {
             let old = x[i - periods];
-            if old.is_normal() {
+            if is_normal(&old) {
               sum = sum - old;
               sum_sq = sum_sq - old * old;
             } else {
@@ -133,7 +133,7 @@ pub fn ta_stddev<NumT: Float + Send + Sync>(
             }
           }
 
-          if nan_in_window > 0 || !val.is_normal() {
+          if nan_in_window > 0 || !is_normal(&val) {
             // Result NaN
           } else {
             // For non-strictly cycle, we might output for i < periods if we wanted partial.
