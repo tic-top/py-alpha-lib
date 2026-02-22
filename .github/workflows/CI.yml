@@ -148,6 +148,7 @@ jobs:
           merge-multiple: true
       - name: upload release to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: actions/checkout@v4
       - name: Get Changelog Entry
         id: changelog_reader
         uses: mindsers/changelog-reader-action@v2
