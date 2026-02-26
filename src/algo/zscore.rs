@@ -22,6 +22,9 @@ pub fn ta_ts_zscore<NumT: Float + Send + Sync>(
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
+
   r.par_chunks_mut(ctx.chunk_size(r.len()))
     .zip(input.par_chunks(ctx.chunk_size(input.len())))
     .for_each(|(r, x)| {
@@ -160,6 +163,9 @@ pub fn ta_zscore<NumT: Float + Send + Sync + Debug>(
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
+
   let group_size = ctx.chunk_size(r.len()) as usize;
   let groups = ctx.groups() as usize;
 
@@ -171,6 +177,9 @@ pub fn ta_zscore<NumT: Float + Send + Sync + Debug>(
   if r.len() != group_size * groups {
     return Err(Error::LengthMismatch(r.len(), group_size * groups));
   }
+
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
 
   let r = UnsafePtr::new(r.as_mut_ptr(), r.len());
   (0..group_size).into_par_iter().for_each(|j| {

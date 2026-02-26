@@ -63,6 +63,9 @@ pub fn ta_ts_rank<NumT: Float + Send + Sync>(
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
+
   if periods == 1 {
     r.fill(NumT::from(1.0).unwrap());
     return Ok(());
@@ -163,6 +166,9 @@ pub fn ta_rank<NumT: Float + Send + Sync + Debug>(
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
+
   let group_size = ctx.chunk_size(r.len()) as usize;
   let groups = ctx.groups() as usize;
 
@@ -174,6 +180,9 @@ pub fn ta_rank<NumT: Float + Send + Sync + Debug>(
     // ensure data is complete
     return Err(Error::LengthMismatch(r.len(), group_size * groups));
   }
+
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
 
   let r = UnsafePtr::new(r.as_mut_ptr(), r.len());
   (0..group_size).into_par_iter().for_each(|j| {
@@ -213,8 +222,8 @@ pub fn ta_rank<NumT: Float + Send + Sync + Debug>(
       if prev_rank_value == rank_window[e].0.value {
         continue;
       }
-      let rank_avg = NumT::from(e - nan_count + s - nan_count + 1).unwrap()
-        / NumT::from(2usize).unwrap();
+      let rank_avg =
+        NumT::from(e - nan_count + s - nan_count + 1).unwrap() / NumT::from(2usize).unwrap();
       for i in s..e {
         r[rank_window[i].1] = rank_avg / total;
       }
@@ -223,8 +232,8 @@ pub fn ta_rank<NumT: Float + Send + Sync + Debug>(
     }
 
     // the last chunk of valid values
-    let rank_avg = NumT::from(valid_count + s - nan_count + 1).unwrap()
-      / NumT::from(2usize).unwrap();
+    let rank_avg =
+      NumT::from(valid_count + s - nan_count + 1).unwrap() / NumT::from(2usize).unwrap();
     for i in s..rank_window.len() {
       r[rank_window[i].1] = rank_avg / total;
     }
@@ -247,6 +256,9 @@ pub fn ta_bins<NumT: Float + Send + Sync + Debug>(
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
+
   let group_size = ctx.chunk_size(r.len()) as usize;
   let groups = ctx.groups() as usize;
 
@@ -254,12 +266,15 @@ pub fn ta_bins<NumT: Float + Send + Sync + Debug>(
     return Err(Error::LengthMismatch(r.len(), group_size * groups));
   }
 
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
+
   // If bins is 0 or 1, everything is bin 0 (or error?)
   // If bins=1, all 0.
   if bins == 0 {
-     // Return 0 or error? Let's return 0.
-     r.fill(NumT::zero());
-     return Ok(());
+    // Return 0 or error? Let's return 0.
+    r.fill(NumT::zero());
+    return Ok(());
   }
 
   let r_ptr = UnsafePtr::new(r.as_mut_ptr(), r.len());
@@ -293,7 +308,7 @@ pub fn ta_bins<NumT: Float + Send + Sync + Debug>(
       // In `returns.rs`, `ta_fret` checks `is_normal`.
       // In `rank.rs`, `ta_rank` does NOT check `is_normal`. It sorts everything.
       // So `ta_bins` should probably follow `ta_rank`.
-      
+
       rank_window.push((input[idx].into(), idx));
     }
     rank_window.sort_by(|a, b| a.0.cmp(&b.0));
@@ -302,7 +317,7 @@ pub fn ta_bins<NumT: Float + Send + Sync + Debug>(
     // We need to count valid values if we want to ignore NaNs?
     // But ta_rank counts everything.
     // I will stick to exact ta_rank logic but map to bins.
-    
+
     let mut prev_rank_value = rank_window[0].0.value;
     let mut s = 0;
     let total = NumT::from(rank_window.len()).unwrap();
@@ -318,18 +333,18 @@ pub fn ta_bins<NumT: Float + Send + Sync + Debug>(
       // rank_avg is 1-based average rank.
       // formula: floor((rank_avg - 1) * bins / total)
       // but ensure result is in [0, bins-1]
-      
+
       let val = rank_window[s].0.value;
       let bin = if val.is_nan() {
-          NumT::nan() // If value is NaN, return NaN
-          // OrderedFloat treats NaN as largest.
-          // If input has NaN, ta_rank assigns high rank.
-          // If we want bins, maybe NaN should be NaN.
-          // Let's assume we preserve NaN if value is not normal.
+        NumT::nan() // If value is NaN, return NaN
+      // OrderedFloat treats NaN as largest.
+      // If input has NaN, ta_rank assigns high rank.
+      // If we want bins, maybe NaN should be NaN.
+      // Let's assume we preserve NaN if value is not normal.
       } else {
-          let b = ((rank_avg - NumT::one()) * bins_t / total).floor();
-          // clamp to bins-1 (although logic says it should be < bins)
-          if b >= bins_t { bins_t - NumT::one() } else { b }
+        let b = ((rank_avg - NumT::one()) * bins_t / total).floor();
+        // clamp to bins-1 (although logic says it should be < bins)
+        if b >= bins_t { bins_t - NumT::one() } else { b }
       };
 
       for i in s..e {
@@ -343,12 +358,12 @@ pub fn ta_bins<NumT: Float + Send + Sync + Debug>(
     let rank_avg = NumT::from(rank_window.len() + s + 1).unwrap() / NumT::from(2usize).unwrap();
     let val = rank_window[s].0.value;
     let bin = if val.is_nan() {
-        NumT::nan()
+      NumT::nan()
     } else {
-        let b = ((rank_avg - NumT::one()) * bins_t / total).floor();
-        if b >= bins_t { bins_t - NumT::one() } else { b }
+      let b = ((rank_avg - NumT::one()) * bins_t / total).floor();
+      if b >= bins_t { bins_t - NumT::one() } else { b }
     };
-    
+
     for i in s..rank_window.len() {
       r[rank_window[i].1] = bin;
     }
@@ -356,7 +371,6 @@ pub fn ta_bins<NumT: Float + Send + Sync + Debug>(
 
   Ok(())
 }
-
 
 #[cfg(test)]
 mod tests {

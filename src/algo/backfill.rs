@@ -19,6 +19,9 @@ pub fn ta_ts_backfill<NumT: Float + Send + Sync>(
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
+
   r.par_chunks_mut(ctx.chunk_size(r.len()))
     .zip(input.par_chunks(ctx.chunk_size(input.len())))
     .for_each(|(r, x)| {
@@ -55,6 +58,9 @@ pub fn ta_ts_count_nans<NumT: Float + Send + Sync>(
   if r.len() != input.len() {
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
+
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
 
   r.par_chunks_mut(ctx.chunk_size(r.len()))
     .zip(input.par_chunks(ctx.chunk_size(input.len())))

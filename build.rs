@@ -1462,13 +1462,19 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
   writeln!(file, "from . import _algo")?;
   writeln!(file, "")?;
   writeln!(file, "def _to_f64(a):")?;
-  writeln!(file, "  \"\"\"Ensure array is float64. Zero-copy if already float64.\"\"\"")?;
+  writeln!(
+    file,
+    "  \"\"\"Ensure array is float64. Zero-copy if already float64.\"\"\""
+  )?;
   writeln!(file, "  if a.dtype == np.float64:")?;
   writeln!(file, "    return a")?;
   writeln!(file, "  return a.astype(np.float64)")?;
   writeln!(file, "")?;
   writeln!(file, "def _to_bool(a):")?;
-  writeln!(file, "  \"\"\"Ensure array is bool. Zero-copy if already bool.\"\"\"")?;
+  writeln!(
+    file,
+    "  \"\"\"Ensure array is bool. Zero-copy if already bool.\"\"\""
+  )?;
   writeln!(file, "  if a.dtype == np.bool_:")?;
   writeln!(file, "    return a")?;
   writeln!(file, "  return a.astype(bool)")?;
@@ -1644,8 +1650,18 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
       // If we want float 0/1, we should convert?
       // Let's stick to bool for now, user can cast.
 
-      writeln!(file, "    {} = {}", a_name, py_convert_list(arrays[1].1, a_name))?;
-      writeln!(file, "    {} = {}", b_name, py_convert_list(arrays[2].1, b_name))?;
+      writeln!(
+        file,
+        "    {} = {}",
+        a_name,
+        py_convert_list(arrays[1].1, a_name)
+      )?;
+      writeln!(
+        file,
+        "    {} = {}",
+        b_name,
+        py_convert_list(arrays[2].1, b_name)
+      )?;
       // output array: use first NumArray for shape; bool output if r is bool
       let first_num_name = if a_is_bool { b_name } else { a_name };
       writeln!(
@@ -1665,7 +1681,11 @@ fn build_algo_py(functions: &[TaFunc]) -> Result<()> {
       writeln!(file, "  else:")?;
       writeln!(file, "    {} = {}", a_name, py_convert(arrays[1].1, a_name))?;
       writeln!(file, "    {} = {}", b_name, py_convert(arrays[2].1, b_name))?;
-      writeln!(file, "    {} = np.empty_like({}{})", r_name, first_num_name, dtype)?;
+      writeln!(
+        file,
+        "    {} = np.empty_like({}{})",
+        r_name, first_num_name, dtype
+      )?;
 
       writeln!(
         file,

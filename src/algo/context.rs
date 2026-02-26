@@ -11,6 +11,9 @@ pub struct Context {
   /// only calculate from this index, 0 means from the first, -1 means from the last
   #[pyo3(attribute("start"))]
   pub _start: i32,
+  /// only calculate up to this index, 0 means up to the last, -1 means up to the second last
+  #[pyo3(attribute("end"))]
+  pub _end: i32,
   /// number of groups, indicates the group count of the input data,
   /// the input data is chunked by group, and each group is calculated independently
   /// 0 means no group, which is the same as 1
@@ -31,8 +34,36 @@ impl Context {
   pub fn new(start: i32, groups: u32, flags: u64) -> Self {
     Self {
       _start: start,
+      _end: 0,
       _groups: groups,
       _flags: flags,
+    }
+  }
+
+  pub fn align_end_mut<'a, T>(&'a self, r: &'a mut [T]) -> &'a mut [T] {
+    if self._end == 0 {
+      return r;
+    }
+    let end = self.end(r.len());
+    &mut r[..end]
+  }
+
+  pub fn align_end<'a, T>(&'a self, r: &'a [T]) -> &'a [T] {
+    if self._end == 0 {
+      return r;
+    }
+    let end = self.end(r.len());
+    &r[..end]
+  }
+
+  pub fn end(&self, total: usize) -> usize {
+    if total == 0 {
+      return 0;
+    }
+    if self._end >= 0 {
+      (total).min(self._end as usize)
+    } else {
+      0.max(total as i32 + self._end) as usize
     }
   }
 
@@ -75,6 +106,7 @@ impl From<(i32, u32, u64)> for Context {
   fn from((start, groups, flags): (i32, u32, u64)) -> Self {
     Self {
       _start: start,
+      _end: 0,
       _groups: groups,
       _flags: flags,
     }

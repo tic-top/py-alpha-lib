@@ -19,6 +19,10 @@ pub fn ta_cross<NumT: Float + Send + Sync>(
     return Err(Error::LengthMismatch(r.len(), a.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let a = ctx.align_end(a);
+  let b = ctx.align_end(b);
+
   r.par_chunks_mut(ctx.chunk_size(r.len()))
     .zip(a.par_chunks(ctx.chunk_size(a.len())))
     .zip(b.par_chunks(ctx.chunk_size(b.len())))
@@ -90,6 +94,10 @@ pub fn ta_rcross<NumT: Float + Send + Sync>(
     return Err(Error::LengthMismatch(r.len(), a.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let a = ctx.align_end(a);
+  let b = ctx.align_end(b);
+
   r.par_chunks_mut(ctx.chunk_size(r.len()))
     .zip(a.par_chunks(ctx.chunk_size(a.len())))
     .zip(b.par_chunks(ctx.chunk_size(b.len())))
@@ -151,6 +159,10 @@ pub fn ta_longcross<NumT: Float + Send + Sync>(
   if r.len() != a.len() || r.len() != b.len() {
     return Err(Error::LengthMismatch(r.len(), a.len()));
   }
+
+  let r = ctx.align_end_mut(r);
+  let a = ctx.align_end(a);
+  let b = ctx.align_end(b);
 
   r.par_chunks_mut(ctx.chunk_size(r.len()))
     .zip(a.par_chunks(ctx.chunk_size(a.len())))
@@ -263,6 +275,10 @@ pub fn ta_rlongcross<NumT: Float + Send + Sync>(
   if r.len() != a.len() || r.len() != b.len() {
     return Err(Error::LengthMismatch(r.len(), a.len()));
   }
+
+  let r = ctx.align_end_mut(r);
+  let a = ctx.align_end(a);
+  let b = ctx.align_end(b);
 
   r.par_chunks_mut(ctx.chunk_size(r.len()))
     .zip(a.par_chunks(ctx.chunk_size(a.len())))

@@ -19,6 +19,9 @@ pub fn ta_stddev<NumT: Float + Send + Sync>(
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
+
   // If periods == 1, stddev is 0.0 (if valid) or NaN?
   // Sample stddev requires N >= 2 usually.
   // Population stddev can be defined for N=1 (it is 0).

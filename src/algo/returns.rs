@@ -26,11 +26,21 @@ pub fn ta_fret<NumT: Float + Send + Sync>(
     return Err(Error::LengthMismatch(r.len(), open.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let open = ctx.align_end(open);
+  let close = ctx.align_end(close);
+  let is_calc = ctx.align_end(is_calc);
+
   let groups = ctx.groups();
   let group_size = ctx.chunk_size(r.len());
   if r.len() != group_size * groups {
     return Err(Error::LengthMismatch(r.len(), group_size * groups));
   }
+
+  let r = ctx.align_end_mut(r);
+  let open = ctx.align_end(open);
+  let close = ctx.align_end(close);
+  let is_calc = ctx.align_end(is_calc);
 
   r.par_chunks_mut(group_size)
     .zip(open.par_chunks(group_size))
@@ -47,7 +57,11 @@ pub fn ta_fret<NumT: Float + Send + Sync>(
       let exit_offset = periods + delay - 1;
       let max_offset = std::cmp::max(exit_offset, delay);
 
-      let end_idx = if c.len() > max_offset { c.len() - max_offset } else { 0 };
+      let end_idx = if c.len() > max_offset {
+        c.len() - max_offset
+      } else {
+        0
+      };
 
       for i in start..end_idx {
         let open_next = o[i + delay];
@@ -70,7 +84,7 @@ pub fn ta_fret<NumT: Float + Send + Sync>(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::algo::{assert_vec_eq_nan, Context};
+  use crate::algo::{Context, assert_vec_eq_nan};
 
   #[test]
   fn test_ta_fret() {
@@ -84,15 +98,18 @@ mod tests {
     // Entry = t+1 = 1 (Open[1]=11.0)
     // Exit = t+1+1-1 = 1 (Close[1]=11.5)
     // Return = (11.5-11.0)/11.0 = 0.5/11.0 = 0.045454545
-    
+
     ta_fret(&ctx, &mut r, &open, &close, &is_calc, 1, 1).unwrap();
-    assert_vec_eq_nan(&r, &vec![
-        0.045454545454545456, 
-        0.041666666666666664, 
-        0.038461538461538464, 
-        0.03571428571428571, 
-        f64::NAN
-    ]);
+    assert_vec_eq_nan(
+      &r,
+      &vec![
+        0.045454545454545456,
+        0.041666666666666664,
+        0.038461538461538464,
+        0.03571428571428571,
+        f64::NAN,
+      ],
+    );
   }
 
   #[test]
@@ -105,14 +122,14 @@ mod tests {
 
     // Test delay=2, periods=1
     // t=0: Entry t+2=2. Exit t+2+1-1=2. (Close[2]-Open[2])/Open[2] = (12.5-12)/12
-    
+
     ta_fret(&ctx, &mut r2, &open, &close, &is_calc, 2, 1).unwrap();
     let expected2 = vec![
-        (12.5 - 12.0) / 12.0,
-        (13.5 - 13.0) / 13.0,
-        (14.5 - 14.0) / 14.0,
-        f64::NAN,
-        f64::NAN
+      (12.5 - 12.0) / 12.0,
+      (13.5 - 13.0) / 13.0,
+      (14.5 - 14.0) / 14.0,
+      f64::NAN,
+      f64::NAN,
     ];
     assert_vec_eq_nan(&r2, &expected2);
   }
@@ -122,16 +139,16 @@ mod tests {
     let open = vec![10.0, 11.0, 12.0];
     let close = vec![10.5, 11.0, 12.5];
     let is_calc = vec![1.0, 0.0, 1.0];
-    
+
     // At i=0. Entry i+1=1.
     // is_calc[1]=0.
     // So r[0] should be NaN.
-    
+
     let mut r = vec![0.0; 3];
     let ctx = Context::default();
-    
+
     ta_fret(&ctx, &mut r, &open, &close, &is_calc, 1, 1).unwrap();
-    
+
     assert!(r[0].is_nan());
   }
 }

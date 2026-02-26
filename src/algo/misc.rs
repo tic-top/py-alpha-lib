@@ -20,6 +20,9 @@ pub fn ta_ts_min_max_diff<NumT: Float + Send + Sync>(
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
+
   use std::collections::VecDeque;
 
   r.par_chunks_mut(ctx.chunk_size(r.len()))
@@ -38,11 +41,19 @@ pub fn ta_ts_min_max_diff<NumT: Float + Send + Sync>(
         let val = x[k];
         if is_normal(&val) {
           while let Some(&back) = max_deque.back() {
-            if val >= x[back] { max_deque.pop_back(); } else { break; }
+            if val >= x[back] {
+              max_deque.pop_back();
+            } else {
+              break;
+            }
           }
           max_deque.push_back(k);
           while let Some(&back) = min_deque.back() {
-            if val <= x[back] { min_deque.pop_back(); } else { break; }
+            if val <= x[back] {
+              min_deque.pop_back();
+            } else {
+              break;
+            }
           }
           min_deque.push_back(k);
         } else {
@@ -55,11 +66,19 @@ pub fn ta_ts_min_max_diff<NumT: Float + Send + Sync>(
 
         if is_normal(&val) {
           while let Some(&back) = max_deque.back() {
-            if val >= x[back] { max_deque.pop_back(); } else { break; }
+            if val >= x[back] {
+              max_deque.pop_back();
+            } else {
+              break;
+            }
           }
           max_deque.push_back(i);
           while let Some(&back) = min_deque.back() {
-            if val <= x[back] { min_deque.pop_back(); } else { break; }
+            if val <= x[back] {
+              min_deque.pop_back();
+            } else {
+              break;
+            }
           }
           min_deque.push_back(i);
         } else {
@@ -72,10 +91,14 @@ pub fn ta_ts_min_max_diff<NumT: Float + Send + Sync>(
             nan_in_window -= 1;
           }
           if let Some(&front) = max_deque.front() {
-            if front <= i - periods { max_deque.pop_front(); }
+            if front <= i - periods {
+              max_deque.pop_front();
+            }
           }
           if let Some(&front) = min_deque.front() {
-            if front <= i - periods { min_deque.pop_front(); }
+            if front <= i - periods {
+              min_deque.pop_front();
+            }
           }
         }
 
@@ -109,6 +132,9 @@ pub fn ta_ts_weighted_delay<NumT: Float + Send + Sync>(
   if r.len() != input.len() {
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
+
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
 
   if periods == 0 {
     r.fill(NumT::nan());
@@ -169,6 +195,9 @@ pub fn ta_ts_moment<NumT: Float + Send + Sync>(
   if r.len() != input.len() {
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
+
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
 
   r.par_chunks_mut(ctx.chunk_size(r.len()))
     .zip(input.par_chunks(ctx.chunk_size(input.len())))
@@ -342,10 +371,7 @@ mod tests {
     // Window [2,3,4]: mean=3, pop_var = 2/3
     // Window [3,4,5]: mean=4, pop_var = 2/3
     let expected = 2.0 / 3.0;
-    assert_vec_eq_nan(
-      &r,
-      &vec![f64::NAN, f64::NAN, expected, expected, expected],
-    );
+    assert_vec_eq_nan(&r, &vec![f64::NAN, f64::NAN, expected, expected, expected]);
   }
 
   #[test]

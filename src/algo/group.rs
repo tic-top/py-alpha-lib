@@ -78,12 +78,20 @@ pub fn ta_group_rank<NumT: Float + Send + Sync + Debug>(
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let category = ctx.align_end(category);
+  let input = ctx.align_end(input);
+
   let group_size = ctx.chunk_size(r.len()) as usize;
   let groups = ctx.groups() as usize;
 
   if r.len() != group_size * groups {
     return Err(Error::LengthMismatch(r.len(), group_size * groups));
   }
+
+  let r = ctx.align_end_mut(r);
+  let category = ctx.align_end(category);
+  let input = ctx.align_end(input);
 
   let r_ptr = UnsafePtr::new(r.as_mut_ptr(), r.len());
   (0..group_size).into_par_iter().for_each(|j| {
@@ -95,7 +103,8 @@ pub fn ta_group_rank<NumT: Float + Send + Sync + Debug>(
     }
 
     // Collect (category, value, index) for valid items
-    let mut items: Vec<(OrderedFloat<NumT>, OrderedFloat<NumT>, usize)> = Vec::with_capacity(groups);
+    let mut items: Vec<(OrderedFloat<NumT>, OrderedFloat<NumT>, usize)> =
+      Vec::with_capacity(groups);
     for i in 0..groups {
       let idx = i * group_size + j;
       let c = category[idx];
@@ -138,8 +147,8 @@ pub fn ta_group_rank<NumT: Float + Send + Sync + Debug>(
           e += 1;
         }
         // Ranks (1-based) for this tie group: (s-cat_start+1) to (e-cat_start)
-        let rank_avg = NumT::from((s - cat_start + 1) + (e - cat_start)).unwrap()
-          / NumT::from(2usize).unwrap();
+        let rank_avg =
+          NumT::from((s - cat_start + 1) + (e - cat_start)).unwrap() / NumT::from(2usize).unwrap();
         for k in s..e {
           r[items[k].2] = rank_avg / total;
         }
@@ -169,12 +178,20 @@ pub fn ta_group_zscore<NumT: Float + Send + Sync + Debug>(
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let category = ctx.align_end(category);
+  let input = ctx.align_end(input);
+
   let group_size = ctx.chunk_size(r.len()) as usize;
   let groups = ctx.groups() as usize;
 
   if r.len() != group_size * groups {
     return Err(Error::LengthMismatch(r.len(), group_size * groups));
   }
+
+  let r = ctx.align_end_mut(r);
+  let category = ctx.align_end(category);
+  let input = ctx.align_end(input);
 
   let r_ptr = UnsafePtr::new(r.as_mut_ptr(), r.len());
   (0..group_size).into_par_iter().for_each(|j| {

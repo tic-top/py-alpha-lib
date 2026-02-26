@@ -19,6 +19,9 @@ pub fn ta_var<NumT: Float + Send + Sync>(
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
+
   r.par_chunks_mut(ctx.chunk_size(r.len()))
     .zip(input.par_chunks(ctx.chunk_size(input.len())))
     .for_each(|(r, x)| {
@@ -160,6 +163,10 @@ pub fn ta_cov<NumT: Float + Send + Sync>(
   if r.len() != x.len() || x.len() != y.len() {
     return Err(Error::LengthMismatch(r.len(), x.len()));
   }
+
+  let r = ctx.align_end_mut(r);
+  let x = ctx.align_end(x);
+  let y = ctx.align_end(y);
 
   let chunk_size = ctx.chunk_size(r.len());
 
@@ -313,6 +320,10 @@ pub fn ta_corr<NumT: Float + Send + Sync>(
   if r.len() != x.len() || x.len() != y.len() {
     return Err(Error::LengthMismatch(r.len(), x.len()));
   }
+
+  let r = ctx.align_end_mut(r);
+  let x = ctx.align_end(x);
+  let y = ctx.align_end(y);
 
   let chunk_size = ctx.chunk_size(r.len());
 
@@ -514,6 +525,10 @@ pub fn ta_regbeta<NumT: Float + Send + Sync>(
     return Err(Error::LengthMismatch(r.len(), y.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let y = ctx.align_end(y);
+  let x = ctx.align_end(x);
+
   let chunk_size = ctx.chunk_size(r.len());
 
   r.par_chunks_mut(chunk_size)
@@ -675,6 +690,10 @@ pub fn ta_regresi<NumT: Float + Send + Sync>(
   if r.len() != y.len() || y.len() != x.len() {
     return Err(Error::LengthMismatch(r.len(), y.len()));
   }
+
+  let r = ctx.align_end_mut(r);
+  let y = ctx.align_end(y);
+  let x = ctx.align_end(x);
 
   let chunk_size = ctx.chunk_size(r.len());
 

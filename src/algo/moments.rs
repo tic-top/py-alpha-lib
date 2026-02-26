@@ -21,6 +21,9 @@ pub fn ta_ts_skewness<NumT: Float + Send + Sync>(
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
+
   let two = NumT::from(2.0).unwrap();
   let three = NumT::from(3.0).unwrap();
 
@@ -160,6 +163,9 @@ pub fn ta_ts_kurtosis<NumT: Float + Send + Sync>(
   if r.len() != input.len() {
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
+
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
 
   let two = NumT::from(2.0).unwrap();
   let three = NumT::from(3.0).unwrap();
@@ -338,7 +344,12 @@ mod tests {
 
     // Pandas: pd.Series([1,1,10]).skew() = 1.7320508075688774
     let expected = 3.0f64.sqrt();
-    assert!((r[2] - expected).abs() < 1e-5, "got {}, expected {}", r[2], expected);
+    assert!(
+      (r[2] - expected).abs() < 1e-5,
+      "got {}, expected {}",
+      r[2],
+      expected
+    );
   }
 
   #[test]

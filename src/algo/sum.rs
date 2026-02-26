@@ -21,6 +21,9 @@ pub fn ta_sum<NumT: Float + Send + Sync>(
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
+
   r.par_chunks_mut(ctx.chunk_size(r.len()))
     .zip(input.par_chunks(ctx.chunk_size(input.len())))
     .for_each(|(r, x)| {
@@ -156,6 +159,9 @@ pub fn ta_sumbars<NumT: Float + Send + Sync>(
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
+
   r.par_chunks_mut(ctx.chunk_size(r.len()))
     .zip(input.par_chunks(ctx.chunk_size(input.len())))
     .for_each(|(r, x)| {
@@ -216,6 +222,10 @@ pub fn ta_sumif<NumT: Float + Send + Sync>(
   if r.len() != input.len() || r.len() != condition.len() {
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
+
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
+  let condition = ctx.align_end(condition);
 
   r.par_chunks_mut(ctx.chunk_size(r.len()))
     .zip(input.par_chunks(ctx.chunk_size(input.len())))

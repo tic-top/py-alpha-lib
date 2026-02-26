@@ -64,6 +64,9 @@ pub fn ta_lwma<NumT: Float + Send + Sync>(
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
 
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
+
   if periods == 1 {
     r.copy_from_slice(input);
     return Ok(());
@@ -216,6 +219,9 @@ pub fn ema_impl<NumT: Float + Send + Sync>(
   if r.len() != input.len() {
     return Err(Error::LengthMismatch(r.len(), input.len()));
   }
+
+  let r = ctx.align_end_mut(r);
+  let input = ctx.align_end(input);
 
   if weight < NumT::zero() || weight > NumT::one() {
     return Err(Error::InvalidParameter(
