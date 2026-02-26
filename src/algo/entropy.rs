@@ -12,7 +12,7 @@ use crate::algo::{Context, Error, is_normal};
 /// [min, max] range, then computes -sum(p * ln(p)) where p is the frequency
 /// of each occupied bin. Uses natural log (base e).
 /// Requires at least 2 valid values. Single-value windows return 0.
-pub fn ta_ts_entropy<NumT: Float + Send + Sync>(
+pub fn ta_entropy<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [NumT],
   input: &[NumT],
@@ -134,7 +134,7 @@ mod tests {
     let bins = 4;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_entropy(&ctx, &mut r, &input, periods, bins).unwrap();
+    ta_entropy(&ctx, &mut r, &input, periods, bins).unwrap();
 
     // 4 values in 4 bins, each p=0.25, entropy = -4*(0.25*ln(0.25)) = ln(4) = 1.3862...
     let expected = 4.0f64.ln();
@@ -152,7 +152,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_entropy(&ctx, &mut r, &input, periods, 10).unwrap();
+    ta_entropy(&ctx, &mut r, &input, periods, 10).unwrap();
 
     // All same -> entropy = 0
     assert_vec_eq_nan(&r, &vec![0.0, 0.0, 0.0]);
@@ -166,7 +166,7 @@ mod tests {
     let bins = 2;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_entropy(&ctx, &mut r, &input, periods, bins).unwrap();
+    ta_entropy(&ctx, &mut r, &input, periods, bins).unwrap();
 
     let expected = 2.0f64.ln();
     assert!(

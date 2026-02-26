@@ -221,11 +221,11 @@ pub fn ta_intercept<NumT: Float + Send + Sync>(
   )
 }
 
-/// Time Series Correlation
+/// Time Series Correlation in moving window on self
 ///
 /// Calculates the correlation coefficient between the input series and the time index.
 ///
-pub fn ta_ts_corr<NumT: Float + Send + Sync>(
+pub fn ta_corr<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [NumT],
   input: &[NumT],
@@ -341,7 +341,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_corr(&ctx, &mut r, &input, periods).unwrap();
+    ta_corr(&ctx, &mut r, &input, periods).unwrap();
 
     let expected = vec![
       f64::NAN,

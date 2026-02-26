@@ -61,10 +61,13 @@ def _fill_panel(data, securities, trades, cols):
       data.select(
         (data["securityid"].rank("dense") - 1).cast(int) * trades
         + (data["tradetime"].rank("dense") - 1).cast(int)
-      ).to_series().to_numpy()
+      )
+      .to_series()
+      .to_numpy()
     )
   except Exception:
     import pandas as pd
+
     sid = data["securityid"]
     tid = data["tradetime"]
     flat_idx = (
@@ -79,8 +82,9 @@ def _fill_panel(data, securities, trades, cols):
     out[c] = target
 
   n_missing = expected - actual
-  logger.warning("Filled %d missing rows to complete %d×%d panel",
-                  n_missing, securities, trades)
+  logger.warning(
+    "Filled %d missing rows to complete %d×%d panel", n_missing, securities, trades
+  )
   return out
 
 
@@ -102,8 +106,7 @@ class ExecContext:
     fill: If True (default), pad missing rows with NaN to complete the panel.
   """
 
-  def __init__(self, data, securities: int = 0, trades: int = 0,
-               fill: bool = True):
+  def __init__(self, data, securities: int = 0, trades: int = 0, fill: bool = True):
     # Auto-infer securities and trades from data columns
     if securities == 0 and trades == 0:
       try:
@@ -167,9 +170,7 @@ class ExecContext:
       self.TR = self._calc_TR()
       self.HD = self.HIGH - alpha.REF(self.HIGH, 1)
       self.LD = self.LOW - alpha.REF(self.LOW, 1)
-      self._SEQUENCE = np.tile(
-        np.arange(1, trades + 1, dtype=np.float64), securities
-      )
+      self._SEQUENCE = np.tile(np.arange(1, trades + 1, dtype=np.float64), securities)
 
   def __call__(self, name: str) -> np.ndarray:
     if name.startswith("ADV"):
@@ -191,18 +192,14 @@ class ExecContext:
     return np.where(
       self.OPEN <= alpha.REF(self.OPEN, 1),
       0,
-      np.maximum(
-        self.HIGH - self.OPEN, self.OPEN - alpha.REF(self.OPEN, 1)
-      ),
+      np.maximum(self.HIGH - self.OPEN, self.OPEN - alpha.REF(self.OPEN, 1)),
     )
 
   def _calc_DBM(self):
     return np.where(
       self.OPEN >= alpha.REF(self.OPEN, 1),
       0,
-      np.maximum(
-        self.OPEN - self.LOW, self.OPEN - alpha.REF(self.OPEN, 1)
-      ),
+      np.maximum(self.OPEN - self.LOW, self.OPEN - alpha.REF(self.OPEN, 1)),
     )
 
   def _calc_TR(self):
@@ -227,8 +224,8 @@ class ExecContext:
   def TS_SUM(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.SUM(a, int(w))
 
-  SUM = TS_SUM       # wq101 / gtja191 / AmiBroker
-  SUMAC = TS_SUM     # gtja191
+  SUM = TS_SUM  # wq101 / gtja191 / AmiBroker
+  SUMAC = TS_SUM  # gtja191
 
   # ── TS: Mean ────────────────────────────────────────────────────────
   #   BRAIN: ts_mean       GTJA: MA, MEAN          AmiBroker: MA
@@ -236,8 +233,8 @@ class ExecContext:
   def TS_MEAN(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.MA(a, int(w))
 
-  MA = TS_MEAN       # universal
-  MEAN = TS_MEAN     # wq101
+  MA = TS_MEAN  # universal
+  MEAN = TS_MEAN  # wq101
 
   # ── TS: EMA family ──────────────────────────────────────────────────
   #   Not in BRAIN canonical set, but widely used in GTJA/AmiBroker
@@ -258,13 +255,13 @@ class ExecContext:
   def TS_STD_DEV(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.STDDEV(a, int(w))
 
-  STDDEV = TS_STD_DEV   # wq101
-  STD = TS_STD_DEV      # gtja191
+  STDDEV = TS_STD_DEV  # wq101
+  STD = TS_STD_DEV  # gtja191
 
   def TS_VARIANCE(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.VAR(a, int(w))
 
-  VAR = TS_VARIANCE     # gtja191
+  VAR = TS_VARIANCE  # gtja191
 
   # ── TS: Correlation / Covariance (two-input) ───────────────────────
   #   BRAIN: ts_correlation, ts_covariance
@@ -272,16 +269,16 @@ class ExecContext:
   #   GTJA:  CORR, COV
 
   def TS_CORRELATION(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
-    return alpha.CORR(a, b, int(w))
+    return alpha.CORR2(a, b, int(w))
 
-  CORR = TS_CORRELATION         # gtja191
+  CORR = TS_CORRELATION  # gtja191
   CORRELATION = TS_CORRELATION  # wq101
 
   def TS_COVARIANCE(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
     return alpha.COV(a, b, int(w))
 
-  COV = TS_COVARIANCE           # gtja191
-  COVARIANCE = TS_COVARIANCE    # wq101
+  COV = TS_COVARIANCE  # gtja191
+  COVARIANCE = TS_COVARIANCE  # wq101
 
   # ── TS: Extremes ───────────────────────────────────────────────────
   #   BRAIN: ts_max, ts_min, ts_argmax, ts_argmin
@@ -291,12 +288,12 @@ class ExecContext:
   def TS_MAX(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.HHV(a, int(w))
 
-  TSMAX = TS_MAX     # gtja191
+  TSMAX = TS_MAX  # gtja191
 
   def TS_MIN(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.LLV(a, int(w))
 
-  TSMIN = TS_MIN     # gtja191
+  TSMIN = TS_MIN  # gtja191
 
   def TS_ARGMAX(self, a: np.ndarray, w: int) -> np.ndarray:
     return int(w) - alpha.HHVBARS(a, int(w))
@@ -314,9 +311,9 @@ class ExecContext:
   #   BRAIN: ts_rank       GTJA: TSRANK
 
   def TS_RANK(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.TS_RANK(a, int(w))
+    return alpha.RANK(a, int(w))
 
-  TSRANK = TS_RANK   # gtja191
+  TSRANK = TS_RANK  # gtja191
 
   # ── TS: Delay / Delta ──────────────────────────────────────────────
   #   BRAIN: ts_delay, ts_delta
@@ -326,12 +323,12 @@ class ExecContext:
   def TS_DELAY(self, a: np.ndarray, p: int) -> np.ndarray:
     return alpha.REF(a, int(p))
 
-  DELAY = TS_DELAY   # wq101
+  DELAY = TS_DELAY  # wq101
 
   def TS_DELTA(self, a: np.ndarray, p: int) -> np.ndarray:
     return a - alpha.REF(a, int(p))
 
-  DELTA = TS_DELTA   # wq101
+  DELTA = TS_DELTA  # wq101
 
   # ── TS: Decay Linear / Weighted Mean ───────────────────────────────
   #   BRAIN: ts_decay_linear
@@ -341,9 +338,9 @@ class ExecContext:
   def TS_DECAY_LINEAR(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.LWMA(a, int(w))
 
-  DECAY_LINEAR = TS_DECAY_LINEAR   # wq101
-  DECAYLINEAR = TS_DECAY_LINEAR    # gtja191
-  WMA = TS_DECAY_LINEAR            # gtja191
+  DECAY_LINEAR = TS_DECAY_LINEAR  # wq101
+  DECAYLINEAR = TS_DECAY_LINEAR  # gtja191
+  WMA = TS_DECAY_LINEAR  # gtja191
 
   # ── TS: Product ────────────────────────────────────────────────────
   #   BRAIN: ts_product    wq101: PRODUCT    GTJA: PROD
@@ -351,8 +348,8 @@ class ExecContext:
   def TS_PRODUCT(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.PRODUCT(a, int(w))
 
-  PRODUCT = TS_PRODUCT   # wq101
-  PROD = TS_PRODUCT      # gtja191
+  PRODUCT = TS_PRODUCT  # wq101
+  PROD = TS_PRODUCT  # gtja191
 
   # ── TS: Regression ─────────────────────────────────────────────────
   #   GTJA: REGBETA, REGRESI
@@ -360,12 +357,12 @@ class ExecContext:
   def TS_REGBETA(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
     return alpha.REGBETA(a, b, int(w))
 
-  REGBETA = TS_REGBETA   # gtja191
+  REGBETA = TS_REGBETA  # gtja191
 
   def TS_REGRESI(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
     return alpha.REGRESI(a, b, int(w))
 
-  REGRESI = TS_REGRESI   # gtja191
+  REGRESI = TS_REGRESI  # gtja191
 
   # ── TS: Counting / Conditional ─────────────────────────────────────
   #   GTJA: COUNT, SUMIF
@@ -373,72 +370,75 @@ class ExecContext:
   def TS_COUNT(self, cond: np.ndarray, w: int) -> np.ndarray:
     return alpha.COUNT(np.asarray(cond, dtype=bool), int(w))
 
-  COUNT = TS_COUNT       # gtja191
+  COUNT = TS_COUNT  # gtja191
 
   def TS_SUMIF(self, a: np.ndarray, w: int, cond) -> np.ndarray:
-    return alpha.SUMIF(np.asarray(a, dtype=np.float64),
-                       np.asarray(cond, dtype=bool), int(w))
+    return alpha.SUMIF(
+      np.asarray(a, dtype=np.float64), np.asarray(cond, dtype=bool), int(w)
+    )
 
-  SUMIF = TS_SUMIF       # gtja191
+  SUMIF = TS_SUMIF  # gtja191
 
   # ── TS: Conditional Scan (SELF recursion) ───────────────────────────
   #   GTJA: SELF-referencing patterns
 
   def SCAN_MUL(self, operand: np.ndarray, cond: np.ndarray) -> np.ndarray:
-    return alpha.SCAN_MUL(np.asarray(operand, dtype=np.float64),
-                          np.asarray(cond, dtype=bool))
+    return alpha.SCAN_MUL(
+      np.asarray(operand, dtype=np.float64), np.asarray(cond, dtype=bool)
+    )
 
   def SCAN_ADD(self, operand: np.ndarray, cond: np.ndarray) -> np.ndarray:
-    return alpha.SCAN_ADD(np.asarray(operand, dtype=np.float64),
-                          np.asarray(cond, dtype=bool))
+    return alpha.SCAN_ADD(
+      np.asarray(operand, dtype=np.float64), np.asarray(cond, dtype=bool)
+    )
 
   # ── TS: Z-Score ────────────────────────────────────────────────────
   #   BRAIN: ts_zscore
 
   def TS_ZSCORE(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.TS_ZSCORE(a, int(w))
+    return alpha.ZSCORE(a, int(w))
 
   # ── TS: Higher Moments ─────────────────────────────────────────────
   #   BRAIN: ts_skewness, ts_kurtosis
 
   def TS_SKEWNESS(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.TS_SKEWNESS(a, int(w))
+    return alpha.SKEWNESS(a, int(w))
 
   def TS_KURTOSIS(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.TS_KURTOSIS(a, int(w))
+    return alpha.KURTOSIS(a, int(w))
 
   # ── TS: Data Utilities ─────────────────────────────────────────────
   #   BRAIN: ts_backfill, ts_count_nans
 
   def TS_BACKFILL(self, a: np.ndarray) -> np.ndarray:
-    return alpha.TS_BACKFILL(a)
+    return alpha.BACKFILL(a)
 
   def TS_COUNT_NANS(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.TS_COUNT_NANS(a, int(w))
+    return alpha.COUNT_NANS(a, int(w))
 
   # ── TS: Entropy ────────────────────────────────────────────────────
   #   BRAIN: ts_entropy
 
   def TS_ENTROPY(self, a: np.ndarray, w: int, bins: int = 10) -> np.ndarray:
-    return alpha.TS_ENTROPY(a, int(w), int(bins))
+    return alpha.ENTROPY(a, int(w), int(bins))
 
   # ── TS: Min-Max Diff (Range) ─────────────────────────────────────
   #   BRAIN: ts_min_max_diff
 
   def TS_MIN_MAX_DIFF(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.TS_MIN_MAX_DIFF(a, int(w))
+    return alpha.MIN_MAX_DIFF(a, int(w))
 
   # ── TS: Weighted Delay ───────────────────────────────────────────
   #   BRAIN: ts_weighted_delay
 
   def TS_WEIGHTED_DELAY(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.TS_WEIGHTED_DELAY(a, int(w))
+    return alpha.WEIGHTED_DELAY(a, int(w))
 
   # ── TS: Central Moment ───────────────────────────────────────────
   #   BRAIN: ts_moment
 
   def TS_MOMENT(self, a: np.ndarray, w: int, k: int = 2) -> np.ndarray:
-    return alpha.TS_MOMENT(a, int(w), int(k))
+    return alpha.MOMENT(a, int(w), int(k))
 
   # ── TS: Cross Detection ────────────────────────────────────────────
   #   AmiBroker/GTJA: CROSS, LONGCROSS
@@ -459,13 +459,13 @@ class ExecContext:
   #   BRAIN: rank          wq101/GTJA: RANK
 
   def RANK(self, a: np.ndarray) -> np.ndarray:
-    return alpha.RANK(a)
+    return alpha.CC_RANK(a)
 
   # ── Z-Score ─────────────────────────────────────────────────────────
   #   BRAIN: zscore
 
   def ZSCORE(self, a: np.ndarray) -> np.ndarray:
-    return alpha.ZSCORE(a)
+    return alpha.CC_ZSCORE(a)
 
   # ── Scale ───────────────────────────────────────────────────────────
   #   BRAIN: scale         wq101: SCALE
@@ -528,9 +528,9 @@ class ExecContext:
   def PASTEURIZE(self, a: np.ndarray) -> np.ndarray:
     return np.where(np.isfinite(a), a, 0.0)
 
-  PURIFY = PASTEURIZE    # BRAIN alias
+  PURIFY = PASTEURIZE  # BRAIN alias
 
   def TAIL(self, a: np.ndarray, limit: float = 3.0) -> np.ndarray:
     return np.clip(a, -limit, limit)
 
-  TRUNCATE = TAIL        # BRAIN alias
+  TRUNCATE = TAIL  # BRAIN alias

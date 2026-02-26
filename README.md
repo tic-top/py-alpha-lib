@@ -31,6 +31,7 @@ Control computation behavior via `alpha.set_ctx()`:
 
 - **`groups`** — Number of securities in the data array. Each group is processed independently and in parallel. Required for cross-sectional operations like `RANK`.
 - **`start`** — Starting index for calculation (default: 0).
+- **`end`** — Ending index for calculation (default: `len(data)`). `end` can be used when you want to calculate only a part of the data. for example, when back test iteratively.
 - **`flags`** — Bitwise flags:
   - `FLAG_SKIP_NAN` (1): Skip NaN values in rolling windows.
   - `FLAG_STRICTLY_CYCLE` (2): Return NaN until window is full (matches pandas `rolling()` default).
@@ -147,6 +148,12 @@ examples/wq101/main.py --with-pd --with-al -s 1 -e 15 # Compare with pandas
 Benchmark scripts in [`benchmarks/`](benchmarks/).
 
 ### Supported Algorithms
+
+Nameing Rules:
+
+- Function starts with `CC_` means it is a cross-commodity/cross-security/cross-group operation.
+- Function without prefix means it is a rolling window operation.
+
 
 | Name | Description |
 |---|---|

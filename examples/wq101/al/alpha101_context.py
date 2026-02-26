@@ -84,13 +84,13 @@ class ExecContext:
     return alpha.STDDEV(a, int(w))
 
   def CORRELATION(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
-    return alpha.CORR(a, b, int(w))
+    return alpha.CORR2(a, b, int(w))
 
   def COVARIANCE(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
     return alpha.COV(a, b, int(w))
 
   def TS_RANK(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.TS_RANK(a, int(w))
+    return alpha.RANK(a, int(w))
 
   def PRODUCT(self, a: np.ndarray, w: int) -> np.ndarray:
     return alpha.PRODUCT(a, int(w))
@@ -118,7 +118,7 @@ class ExecContext:
     return a * k / sum
 
   def RANK(self, a: np.ndarray) -> np.ndarray:
-    return alpha.RANK(np.asarray(a, dtype=np.float64))
+    return alpha.CC_RANK(np.asarray(a, dtype=np.float64))
 
   def TS_ARGMAX(self, a: np.ndarray, w: int) -> np.ndarray:
     return w - alpha.HHVBARS(a, int(w))

@@ -11,7 +11,7 @@ use crate::algo::{Context, Error, is_normal, skip_nan_window::SkipNanWindow};
 /// Uses adjusted Fisher-Pearson formula (matches pandas):
 /// skew = n / ((n-1)(n-2)) * sum(((x-mean)/std)^3)
 /// Requires at least 3 valid values.
-pub fn ta_ts_skewness<NumT: Float + Send + Sync>(
+pub fn ta_skewness<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [NumT],
   input: &[NumT],
@@ -154,7 +154,7 @@ pub fn ta_ts_skewness<NumT: Float + Send + Sync>(
 /// Uses adjusted Fisher formula (matches pandas):
 /// kurt = n(n+1)/((n-1)(n-2)(n-3)) * sum(((x-mean)/std)^4) - 3(n-1)^2/((n-2)(n-3))
 /// Requires at least 4 valid values.
-pub fn ta_ts_kurtosis<NumT: Float + Send + Sync>(
+pub fn ta_kurtosis<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [NumT],
   input: &[NumT],
@@ -327,7 +327,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_skewness(&ctx, &mut r, &input, periods).unwrap();
+    ta_skewness(&ctx, &mut r, &input, periods).unwrap();
 
     // [1,2,3]: skew=0, [2,3,4]: skew=0, [3,4,5]: skew=0
     assert_vec_eq_nan(&r, &vec![f64::NAN, f64::NAN, 0.0, 0.0, 0.0]);
@@ -340,7 +340,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_skewness(&ctx, &mut r, &input, periods).unwrap();
+    ta_skewness(&ctx, &mut r, &input, periods).unwrap();
 
     // Pandas: pd.Series([1,1,10]).skew() = 1.7320508075688774
     let expected = 3.0f64.sqrt();
@@ -358,7 +358,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, FLAG_SKIP_NAN);
-    ta_ts_skewness(&ctx, &mut r, &input, periods).unwrap();
+    ta_skewness(&ctx, &mut r, &input, periods).unwrap();
 
     // Position 3: valid window [1, 2, 3] -> skew = 0
     assert_vec_eq_nan(&r, &vec![f64::NAN, f64::NAN, f64::NAN, 0.0]);
@@ -371,7 +371,7 @@ mod tests {
     let periods = 4;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_kurtosis(&ctx, &mut r, &input, periods).unwrap();
+    ta_kurtosis(&ctx, &mut r, &input, periods).unwrap();
 
     assert!((r[3] - (-1.2)).abs() < 1e-5, "got {}, expected -1.2", r[3]);
   }
@@ -382,7 +382,7 @@ mod tests {
     let periods = 4;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, FLAG_SKIP_NAN);
-    ta_ts_kurtosis(&ctx, &mut r, &input, periods).unwrap();
+    ta_kurtosis(&ctx, &mut r, &input, periods).unwrap();
 
     // Position 4: valid values [1, 2, 3, 4] -> kurt = -1.2
     assert!((r[4] - (-1.2)).abs() < 1e-5, "got {}, expected -1.2", r[4]);

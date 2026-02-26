@@ -10,7 +10,7 @@ use crate::algo::{Context, Error, is_normal, skip_nan_window::SkipNanWindow};
 ///
 /// TS_MIN_MAX_DIFF = TS_MAX(x, d) - TS_MIN(x, d)
 /// Single-pass using two monotonic deques for efficiency.
-pub fn ta_ts_min_max_diff<NumT: Float + Send + Sync>(
+pub fn ta_min_max_diff<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [NumT],
   input: &[NumT],
@@ -121,9 +121,9 @@ pub fn ta_ts_min_max_diff<NumT: Float + Send + Sync>(
 
 /// Calculate weighted delay (exponentially weighted lag)
 ///
-/// TS_WEIGHTED_DELAY(x, k) = (k * x[t-1] + (k-1) * x[t-2] + ... + 1 * x[t-k]) / (k*(k+1)/2)
+/// WEIGHTED_DELAY(x, k) = (k * x[t-1] + (k-1) * x[t-2] + ... + 1 * x[t-k]) / (k*(k+1)/2)
 /// This is essentially LWMA applied to the lagged (shifted by 1) series over k periods.
-pub fn ta_ts_weighted_delay<NumT: Float + Send + Sync>(
+pub fn ta_weighted_delay<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [NumT],
   input: &[NumT],
@@ -182,10 +182,10 @@ pub fn ta_ts_weighted_delay<NumT: Float + Send + Sync>(
 
 /// Calculate rolling k-th central moment over a moving window
 ///
-/// TS_MOMENT(x, d, k) = mean((x - mean)^k) over window of d periods.
+/// MOMENT(x, d, k) = mean((x - mean)^k) over window of d periods.
 /// This is the raw (non-adjusted) sample moment.
 /// k=2 gives variance (population), k=3 gives raw third moment, etc.
-pub fn ta_ts_moment<NumT: Float + Send + Sync>(
+pub fn ta_moment<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [NumT],
   input: &[NumT],
@@ -327,7 +327,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_min_max_diff(&ctx, &mut r, &input, periods).unwrap();
+    ta_min_max_diff(&ctx, &mut r, &input, periods).unwrap();
 
     // 0: [1] -> 0
     // 1: [1,5] -> 4
@@ -343,7 +343,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_weighted_delay(&ctx, &mut r, &input, periods).unwrap();
+    ta_weighted_delay(&ctx, &mut r, &input, periods).unwrap();
 
     // i=3: lags are x[2]=30(w=3), x[1]=20(w=2), x[0]=10(w=1)
     //       = (90 + 40 + 10) / 6 = 140/6 = 23.333...
@@ -365,7 +365,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_moment(&ctx, &mut r, &input, periods, 2).unwrap();
+    ta_moment(&ctx, &mut r, &input, periods, 2).unwrap();
 
     // Window [1,2,3]: mean=2, pop_var = (1+0+1)/3 = 2/3 = 0.6667
     // Window [2,3,4]: mean=3, pop_var = 2/3
@@ -381,7 +381,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_moment(&ctx, &mut r, &input, periods, 3).unwrap();
+    ta_moment(&ctx, &mut r, &input, periods, 3).unwrap();
 
     // Evenly spaced -> 3rd moment = 0
     assert_vec_eq_nan(&r, &vec![f64::NAN, f64::NAN, 0.0, 0.0, 0.0]);
@@ -393,7 +393,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, FLAG_SKIP_NAN);
-    ta_ts_moment(&ctx, &mut r, &input, periods, 2).unwrap();
+    ta_moment(&ctx, &mut r, &input, periods, 2).unwrap();
 
     // Position 3: valid [1, 2, 3], mean=2, pop_var = 2/3
     let expected = 2.0 / 3.0;

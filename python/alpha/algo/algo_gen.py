@@ -18,6 +18,26 @@ def _to_bool(a):
     return a
   return a.astype(bool)
 
+def BACKFILL(
+  input: np.ndarray | list[np.ndarray]
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Forward-fill NaN values with the last valid observation
+  
+  Iterates forward through each group; if x[i] is NaN, copies the last valid value.
+  Leading NaNs (before any valid value) remain NaN.
+  """
+  if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
+    r = [np.empty_like(x) for x in input]
+    _algo.backfill(r, input)
+    return r
+  else:
+    input = _to_f64(input)
+    r = np.empty_like(input)
+    _algo.backfill(r, input)
+    return r
+
 def BARSLAST(
   input: np.ndarray | list[np.ndarray]
 ) -> np.ndarray | list[np.ndarray]:
@@ -76,11 +96,68 @@ def BINS(
     _algo.bins(r, input, bins)
     return r
 
+def CC_RANK(
+  input: np.ndarray | list[np.ndarray]
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate rank percentage cross group dimension, the ctx.groups() is the number of groups
+  Same value are averaged
+  """
+  if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
+    r = [np.empty_like(x) for x in input]
+    _algo.cc_rank(r, input)
+    return r
+  else:
+    input = _to_f64(input)
+    r = np.empty_like(input)
+    _algo.cc_rank(r, input)
+    return r
+
+def CC_ZSCORE(
+  input: np.ndarray | list[np.ndarray]
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate cross-sectional Z-Score across groups at each time step
+  
+  Z-Score = (x - mean) / stddev, computed across all groups for each time position.
+  NaN values are excluded from mean/stddev computation. NaN input produces NaN output.
+  """
+  if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
+    r = [np.empty_like(x) for x in input]
+    _algo.cc_zscore(r, input)
+    return r
+  else:
+    input = _to_f64(input)
+    r = np.empty_like(input)
+    _algo.cc_zscore(r, input)
+    return r
+
 def CORR(
+  input: np.ndarray | list[np.ndarray], periods: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Time Series Correlation in moving window on self
+  
+  Calculates the correlation coefficient between the input series and the time index.
+  """
+  if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
+    r = [np.empty_like(x) for x in input]
+    _algo.corr(r, input, periods)
+    return r
+  else:
+    input = _to_f64(input)
+    r = np.empty_like(input)
+    _algo.corr(r, input, periods)
+    return r
+
+def CORR2(
   x: np.ndarray | list[np.ndarray], y: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
   """
-  Calculate Correlation over a moving window
+  Calculate two series correlation over a moving window
   
   Correlation = Cov(X, Y) / (StdDev(X) * StdDev(Y))
   """
@@ -88,13 +165,13 @@ def CORR(
     x = [_to_f64(x) for x in x]
     y = [_to_f64(x) for x in y]
     r = [np.empty_like(x) for x in x]
-    _algo.corr(r, x, y, periods)
+    _algo.corr2(r, x, y, periods)
     return r
   else:
     x = _to_f64(x)
     y = _to_f64(y)
     r = np.empty_like(x)
-    _algo.corr(r, x, y, periods)
+    _algo.corr2(r, x, y, periods)
     return r
 
 def COUNT(
@@ -114,6 +191,25 @@ def COUNT(
     r = np.empty_like(input, dtype=float)
     input = input.astype(bool)
     _algo.count(r, input, periods)
+    return r
+
+def COUNT_NANS(
+  input: np.ndarray | list[np.ndarray], periods: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Count number of NaN values in a rolling window
+  
+  For each position, counts the number of NaN values in the preceding `periods` elements.
+  """
+  if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
+    r = [np.empty_like(x) for x in input]
+    _algo.count_nans(r, input, periods)
+    return r
+  else:
+    input = _to_f64(input)
+    r = np.empty_like(input)
+    _algo.count_nans(r, input, periods)
     return r
 
 def COV(
@@ -175,6 +271,28 @@ def DMA(
     input = _to_f64(input)
     r = np.empty_like(input)
     _algo.dma(r, input, weight)
+    return r
+
+def ENTROPY(
+  input: np.ndarray | list[np.ndarray], periods: int, bins: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate rolling Shannon entropy over a moving window
+  
+  Discretizes values into `bins` equal-width buckets within the window's
+  [min, max] range, then computes -sum(p * ln(p)) where p is the frequency
+  of each occupied bin. Uses natural log (base e).
+  Requires at least 2 valid values. Single-value windows return 0.
+  """
+  if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
+    r = [np.empty_like(x) for x in input]
+    _algo.entropy(r, input, periods, bins)
+    return r
+  else:
+    input = _to_f64(input)
+    r = np.empty_like(input)
+    _algo.entropy(r, input, periods, bins)
     return r
 
 def FRET(
@@ -308,6 +426,27 @@ def INTERCEPT(
     _algo.intercept(r, input, periods)
     return r
 
+def KURTOSIS(
+  input: np.ndarray | list[np.ndarray], periods: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate rolling sample excess Kurtosis over a moving window
+  
+  Uses adjusted Fisher formula (matches pandas):
+  kurt = n(n+1)/((n-1)(n-2)(n-3)) * sum(((x-mean)/std)^4) - 3(n-1)^2/((n-2)(n-3))
+  Requires at least 4 valid values.
+  """
+  if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
+    r = [np.empty_like(x) for x in input]
+    _algo.kurtosis(r, input, periods)
+    return r
+  else:
+    input = _to_f64(input)
+    r = np.empty_like(input)
+    _algo.kurtosis(r, input, periods)
+    return r
+
 def LLV(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
@@ -403,6 +542,47 @@ def MA(
     _algo.ma(r, input, periods)
     return r
 
+def MIN_MAX_DIFF(
+  input: np.ndarray | list[np.ndarray], periods: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate rolling min-max difference (range) over a moving window
+  
+  TS_MIN_MAX_DIFF = TS_MAX(x, d) - TS_MIN(x, d)
+  Single-pass using two monotonic deques for efficiency.
+  """
+  if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
+    r = [np.empty_like(x) for x in input]
+    _algo.min_max_diff(r, input, periods)
+    return r
+  else:
+    input = _to_f64(input)
+    r = np.empty_like(input)
+    _algo.min_max_diff(r, input, periods)
+    return r
+
+def MOMENT(
+  input: np.ndarray | list[np.ndarray], periods: int, k: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate rolling k-th central moment over a moving window
+  
+  MOMENT(x, d, k) = mean((x - mean)^k) over window of d periods.
+  This is the raw (non-adjusted) sample moment.
+  k=2 gives variance (population), k=3 gives raw third moment, etc.
+  """
+  if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
+    r = [np.empty_like(x) for x in input]
+    _algo.moment(r, input, periods, k)
+    return r
+  else:
+    input = _to_f64(input)
+    r = np.empty_like(input)
+    _algo.moment(r, input, periods, k)
+    return r
+
 def NEUTRALIZE(
   category: np.ndarray | list[np.ndarray], input: np.ndarray | list[np.ndarray]
 ) -> np.ndarray | list[np.ndarray]:
@@ -444,21 +624,23 @@ def PRODUCT(
     return r
 
 def RANK(
-  input: np.ndarray | list[np.ndarray]
+  input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
   """
-  Calculate rank percentage cross group dimension, the ctx.groups() is the number of groups
-  Same value are averaged
+  Calculate rank in a sliding window with size `periods`
+  
+  Uses min-rank method for ties (same as pandas rankdata method='min').
+  NaN values are treated as larger than all non-NaN values.
   """
   if isinstance(input, list):
     input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
-    _algo.rank(r, input)
+    _algo.rank(r, input, periods)
     return r
   else:
     input = _to_f64(input)
     r = np.empty_like(input)
-    _algo.rank(r, input)
+    _algo.rank(r, input, periods)
     return r
 
 def RCROSS(
@@ -605,6 +787,27 @@ def SCAN_MUL(
     _algo.scan_mul(r, input, condition)
     return r
 
+def SKEWNESS(
+  input: np.ndarray | list[np.ndarray], periods: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate rolling sample Skewness over a moving window
+  
+  Uses adjusted Fisher-Pearson formula (matches pandas):
+  skew = n / ((n-1)(n-2)) * sum(((x-mean)/std)^3)
+  Requires at least 3 valid values.
+  """
+  if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
+    r = [np.empty_like(x) for x in input]
+    _algo.skewness(r, input, periods)
+    return r
+  else:
+    input = _to_f64(input)
+    r = np.empty_like(input)
+    _algo.skewness(r, input, periods)
+    return r
+
 def SLOPE(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
@@ -723,229 +926,6 @@ def SUMIF(
     _algo.sumif(r, input, condition, periods)
     return r
 
-def TS_BACKFILL(
-  input: np.ndarray | list[np.ndarray]
-) -> np.ndarray | list[np.ndarray]:
-  """
-  Forward-fill NaN values with the last valid observation
-  
-  Iterates forward through each group; if x[i] is NaN, copies the last valid value.
-  Leading NaNs (before any valid value) remain NaN.
-  """
-  if isinstance(input, list):
-    input = [_to_f64(x) for x in input]
-    r = [np.empty_like(x) for x in input]
-    _algo.ts_backfill(r, input)
-    return r
-  else:
-    input = _to_f64(input)
-    r = np.empty_like(input)
-    _algo.ts_backfill(r, input)
-    return r
-
-def TS_CORR(
-  input: np.ndarray | list[np.ndarray], periods: int
-) -> np.ndarray | list[np.ndarray]:
-  """
-  Time Series Correlation
-  
-  Calculates the correlation coefficient between the input series and the time index.
-  """
-  if isinstance(input, list):
-    input = [_to_f64(x) for x in input]
-    r = [np.empty_like(x) for x in input]
-    _algo.ts_corr(r, input, periods)
-    return r
-  else:
-    input = _to_f64(input)
-    r = np.empty_like(input)
-    _algo.ts_corr(r, input, periods)
-    return r
-
-def TS_COUNT_NANS(
-  input: np.ndarray | list[np.ndarray], periods: int
-) -> np.ndarray | list[np.ndarray]:
-  """
-  Count number of NaN values in a rolling window
-  
-  For each position, counts the number of NaN values in the preceding `periods` elements.
-  """
-  if isinstance(input, list):
-    input = [_to_f64(x) for x in input]
-    r = [np.empty_like(x) for x in input]
-    _algo.ts_count_nans(r, input, periods)
-    return r
-  else:
-    input = _to_f64(input)
-    r = np.empty_like(input)
-    _algo.ts_count_nans(r, input, periods)
-    return r
-
-def TS_ENTROPY(
-  input: np.ndarray | list[np.ndarray], periods: int, bins: int
-) -> np.ndarray | list[np.ndarray]:
-  """
-  Calculate rolling Shannon entropy over a moving window
-  
-  Discretizes values into `bins` equal-width buckets within the window's
-  [min, max] range, then computes -sum(p * ln(p)) where p is the frequency
-  of each occupied bin. Uses natural log (base e).
-  Requires at least 2 valid values. Single-value windows return 0.
-  """
-  if isinstance(input, list):
-    input = [_to_f64(x) for x in input]
-    r = [np.empty_like(x) for x in input]
-    _algo.ts_entropy(r, input, periods, bins)
-    return r
-  else:
-    input = _to_f64(input)
-    r = np.empty_like(input)
-    _algo.ts_entropy(r, input, periods, bins)
-    return r
-
-def TS_KURTOSIS(
-  input: np.ndarray | list[np.ndarray], periods: int
-) -> np.ndarray | list[np.ndarray]:
-  """
-  Calculate rolling sample excess Kurtosis over a moving window
-  
-  Uses adjusted Fisher formula (matches pandas):
-  kurt = n(n+1)/((n-1)(n-2)(n-3)) * sum(((x-mean)/std)^4) - 3(n-1)^2/((n-2)(n-3))
-  Requires at least 4 valid values.
-  """
-  if isinstance(input, list):
-    input = [_to_f64(x) for x in input]
-    r = [np.empty_like(x) for x in input]
-    _algo.ts_kurtosis(r, input, periods)
-    return r
-  else:
-    input = _to_f64(input)
-    r = np.empty_like(input)
-    _algo.ts_kurtosis(r, input, periods)
-    return r
-
-def TS_MIN_MAX_DIFF(
-  input: np.ndarray | list[np.ndarray], periods: int
-) -> np.ndarray | list[np.ndarray]:
-  """
-  Calculate rolling min-max difference (range) over a moving window
-  
-  TS_MIN_MAX_DIFF = TS_MAX(x, d) - TS_MIN(x, d)
-  Single-pass using two monotonic deques for efficiency.
-  """
-  if isinstance(input, list):
-    input = [_to_f64(x) for x in input]
-    r = [np.empty_like(x) for x in input]
-    _algo.ts_min_max_diff(r, input, periods)
-    return r
-  else:
-    input = _to_f64(input)
-    r = np.empty_like(input)
-    _algo.ts_min_max_diff(r, input, periods)
-    return r
-
-def TS_MOMENT(
-  input: np.ndarray | list[np.ndarray], periods: int, k: int
-) -> np.ndarray | list[np.ndarray]:
-  """
-  Calculate rolling k-th central moment over a moving window
-  
-  TS_MOMENT(x, d, k) = mean((x - mean)^k) over window of d periods.
-  This is the raw (non-adjusted) sample moment.
-  k=2 gives variance (population), k=3 gives raw third moment, etc.
-  """
-  if isinstance(input, list):
-    input = [_to_f64(x) for x in input]
-    r = [np.empty_like(x) for x in input]
-    _algo.ts_moment(r, input, periods, k)
-    return r
-  else:
-    input = _to_f64(input)
-    r = np.empty_like(input)
-    _algo.ts_moment(r, input, periods, k)
-    return r
-
-def TS_RANK(
-  input: np.ndarray | list[np.ndarray], periods: int
-) -> np.ndarray | list[np.ndarray]:
-  """
-  Calculate rank in a sliding window with size `periods`
-  
-  Uses min-rank method for ties (same as pandas rankdata method='min').
-  NaN values are treated as larger than all non-NaN values.
-  """
-  if isinstance(input, list):
-    input = [_to_f64(x) for x in input]
-    r = [np.empty_like(x) for x in input]
-    _algo.ts_rank(r, input, periods)
-    return r
-  else:
-    input = _to_f64(input)
-    r = np.empty_like(input)
-    _algo.ts_rank(r, input, periods)
-    return r
-
-def TS_SKEWNESS(
-  input: np.ndarray | list[np.ndarray], periods: int
-) -> np.ndarray | list[np.ndarray]:
-  """
-  Calculate rolling sample Skewness over a moving window
-  
-  Uses adjusted Fisher-Pearson formula (matches pandas):
-  skew = n / ((n-1)(n-2)) * sum(((x-mean)/std)^3)
-  Requires at least 3 valid values.
-  """
-  if isinstance(input, list):
-    input = [_to_f64(x) for x in input]
-    r = [np.empty_like(x) for x in input]
-    _algo.ts_skewness(r, input, periods)
-    return r
-  else:
-    input = _to_f64(input)
-    r = np.empty_like(input)
-    _algo.ts_skewness(r, input, periods)
-    return r
-
-def TS_WEIGHTED_DELAY(
-  input: np.ndarray | list[np.ndarray], periods: int
-) -> np.ndarray | list[np.ndarray]:
-  """
-  Calculate weighted delay (exponentially weighted lag)
-  
-  TS_WEIGHTED_DELAY(x, k) = (k * x[t-1] + (k-1) * x[t-2] + ... + 1 * x[t-k]) / (k*(k+1)/2)
-  This is essentially LWMA applied to the lagged (shifted by 1) series over k periods.
-  """
-  if isinstance(input, list):
-    input = [_to_f64(x) for x in input]
-    r = [np.empty_like(x) for x in input]
-    _algo.ts_weighted_delay(r, input, periods)
-    return r
-  else:
-    input = _to_f64(input)
-    r = np.empty_like(input)
-    _algo.ts_weighted_delay(r, input, periods)
-    return r
-
-def TS_ZSCORE(
-  input: np.ndarray | list[np.ndarray], periods: int
-) -> np.ndarray | list[np.ndarray]:
-  """
-  Calculate rolling Z-Score over a moving window
-  
-  Z-Score = (x - mean) / stddev, computed over a rolling window of `periods`.
-  Uses sample stddev (ddof=1) to match pandas.
-  """
-  if isinstance(input, list):
-    input = [_to_f64(x) for x in input]
-    r = [np.empty_like(x) for x in input]
-    _algo.ts_zscore(r, input, periods)
-    return r
-  else:
-    input = _to_f64(input)
-    r = np.empty_like(input)
-    _algo.ts_zscore(r, input, periods)
-    return r
-
 def VAR(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
@@ -965,23 +945,43 @@ def VAR(
     _algo.var(r, input, periods)
     return r
 
-def ZSCORE(
-  input: np.ndarray | list[np.ndarray]
+def WEIGHTED_DELAY(
+  input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
   """
-  Calculate cross-sectional Z-Score across groups at each time step
+  Calculate weighted delay (exponentially weighted lag)
   
-  Z-Score = (x - mean) / stddev, computed across all groups for each time position.
-  NaN values are excluded from mean/stddev computation. NaN input produces NaN output.
+  WEIGHTED_DELAY(x, k) = (k * x[t-1] + (k-1) * x[t-2] + ... + 1 * x[t-k]) / (k*(k+1)/2)
+  This is essentially LWMA applied to the lagged (shifted by 1) series over k periods.
   """
   if isinstance(input, list):
     input = [_to_f64(x) for x in input]
     r = [np.empty_like(x) for x in input]
-    _algo.zscore(r, input)
+    _algo.weighted_delay(r, input, periods)
     return r
   else:
     input = _to_f64(input)
     r = np.empty_like(input)
-    _algo.zscore(r, input)
+    _algo.weighted_delay(r, input, periods)
+    return r
+
+def ZSCORE(
+  input: np.ndarray | list[np.ndarray], periods: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate rolling Z-Score over a moving window
+  
+  Z-Score = (x - mean) / stddev, computed over a rolling window of `periods`.
+  Uses sample stddev (ddof=1) to match pandas.
+  """
+  if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
+    r = [np.empty_like(x) for x in input]
+    _algo.zscore(r, input, periods)
+    return r
+  else:
+    input = _to_f64(input)
+    r = np.empty_like(input)
+    _algo.zscore(r, input, periods)
     return r
 

@@ -30,16 +30,18 @@ mod algo_impl {
   }
 
   #[pyfunction]
-  #[pyo3(signature = (/, start=None, groups=None, flags=None))]
+  #[pyo3(signature = (/, start=None, end=None, groups=None, flags=None))]
   pub fn set_ctx<'py>(
     _py: Python<'py>,
     start: Option<i32>,
+    end: Option<i32>,
     groups: Option<u32>,
     flags: Option<u64>,
   ) -> PyResult<()> {
     match _ALGO_CTX_.try_write() {
       Ok(mut ctx) => {
         start.map(|s| ctx._start = s);
+        end.map(|e| ctx._end = e);
         groups.map(|g| ctx._groups = g);
         flags.map(|f| ctx._flags = f);
         Ok(())

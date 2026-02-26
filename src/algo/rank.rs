@@ -53,7 +53,7 @@ impl<NumT: Float + Debug> Debug for OrderedFloat<NumT> {
 ///
 /// Uses min-rank method for ties (same as pandas rankdata method='min').
 /// NaN values are treated as larger than all non-NaN values.
-pub fn ta_ts_rank<NumT: Float + Send + Sync>(
+pub fn ta_rank<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [NumT],
   input: &[NumT],
@@ -157,7 +157,7 @@ unsafe impl<NumT: Float> Sync for UnsafePtr<NumT> {}
 
 /// Calculate rank percentage cross group dimension, the ctx.groups() is the number of groups
 /// Same value are averaged
-pub fn ta_rank<NumT: Float + Send + Sync + Debug>(
+pub fn ta_cc_rank<NumT: Float + Send + Sync + Debug>(
   ctx: &Context,
   r: &mut [NumT],
   input: &[NumT],
@@ -173,7 +173,7 @@ pub fn ta_rank<NumT: Float + Send + Sync + Debug>(
   let groups = ctx.groups() as usize;
 
   if ctx.groups() < 2 {
-    return ta_ts_rank(ctx, r, input, 0);
+    return ta_rank(ctx, r, input, 0);
   }
 
   if r.len() != group_size * groups {
@@ -383,7 +383,7 @@ mod tests {
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
 
-    ta_ts_rank(&ctx, &mut r, &input, 3).unwrap();
+    ta_rank(&ctx, &mut r, &input, 3).unwrap();
     // Position 0: [1] -> rank 1
     // Position 1: [1,2] -> rank of 2 is 2
     // Position 2: [1,2,3] -> rank of 3 is 3
@@ -398,7 +398,7 @@ mod tests {
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
 
-    ta_ts_rank(&ctx, &mut r, &input, 1).unwrap();
+    ta_rank(&ctx, &mut r, &input, 1).unwrap();
     assert_vec_eq_nan(&r, &vec![1.0, 1.0, 1.0]);
   }
 
@@ -408,7 +408,7 @@ mod tests {
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
 
-    ta_ts_rank(&ctx, &mut r, &input, 3).unwrap();
+    ta_rank(&ctx, &mut r, &input, 3).unwrap();
     // NaN gets the highest rank since NaN != NaN
     // Position 0: [1] -> 1
     // Position 1: [1, NaN] -> NaN rank 2 (highest)
@@ -425,7 +425,7 @@ mod tests {
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
 
-    ta_ts_rank(&ctx, &mut r, &input, 3).unwrap();
+    ta_rank(&ctx, &mut r, &input, 3).unwrap();
     // Position 0: [1] -> rank of 1 is 1
     // Position 1: [1, 1] -> rank of 1 is 1 (min rank for ties)
     // Position 2: [1, 1, 2] -> rank of 2 is 3 (two 1s below it)
@@ -439,7 +439,7 @@ mod tests {
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
 
-    ta_ts_rank(&ctx, &mut r, &input, 3).unwrap();
+    ta_rank(&ctx, &mut r, &input, 3).unwrap();
     // Position 0: [3] -> rank 1
     // Position 1: [3, 1] -> rank of 1 is 1
     // Position 2: [3, 1, 2] -> rank of 2 is 2
@@ -454,7 +454,7 @@ mod tests {
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 3, 0);
 
-    ta_rank(&ctx, &mut r, &input).unwrap();
+    ta_cc_rank(&ctx, &mut r, &input).unwrap();
     assert_vec_eq_nan(&r, &vec![0.5, 1.0, 0.5]);
   }
 
@@ -464,7 +464,7 @@ mod tests {
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 2, 0);
 
-    ta_rank(&ctx, &mut r, &input).unwrap();
+    ta_cc_rank(&ctx, &mut r, &input).unwrap();
     // j=0: values [3,2], sorted [2,3], ranks [2,1] at indices 0,2
     // j=1: values [1,4], sorted [1,4], ranks [1,2] at indices 1,3
     assert_vec_eq_nan(&r, &vec![1.0, 0.5, 0.5, 1.0]);
@@ -476,7 +476,7 @@ mod tests {
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 3, 0);
 
-    ta_rank(&ctx, &mut r, &input).unwrap();
+    ta_cc_rank(&ctx, &mut r, &input).unwrap();
     // j=0: values [3,2,4], sorted [2,3,4], ranks [2,1,3] at 0,2,4
     // j=1: values [1,5,6], sorted [1,5,6], ranks [1,2,3] at 1,3,5
     assert_vec_eq_nan(
@@ -499,7 +499,7 @@ mod tests {
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 3, 0);
 
-    ta_rank(&ctx, &mut r, &input).unwrap();
+    ta_cc_rank(&ctx, &mut r, &input).unwrap();
     // j=0: values [3,1,4], all valid, sorted [1,3,4], ranks [2,1,3]
     // j=1: values [NaN,5,6], 2 valid, sorted [5,6,NaN]
     //   5 -> rank 1/2=0.5, 6 -> rank 2/2=1.0, NaN -> NaN

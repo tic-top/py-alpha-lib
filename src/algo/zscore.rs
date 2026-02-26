@@ -12,7 +12,7 @@ use crate::algo::{Context, Error, is_normal, skip_nan_window::SkipNanWindow};
 ///
 /// Z-Score = (x - mean) / stddev, computed over a rolling window of `periods`.
 /// Uses sample stddev (ddof=1) to match pandas.
-pub fn ta_ts_zscore<NumT: Float + Send + Sync>(
+pub fn ta_zscore<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [NumT],
   input: &[NumT],
@@ -154,7 +154,7 @@ unsafe impl<NumT: Float> Sync for UnsafePtr<NumT> {}
 ///
 /// Z-Score = (x - mean) / stddev, computed across all groups for each time position.
 /// NaN values are excluded from mean/stddev computation. NaN input produces NaN output.
-pub fn ta_zscore<NumT: Float + Send + Sync + Debug>(
+pub fn ta_cc_zscore<NumT: Float + Send + Sync + Debug>(
   ctx: &Context,
   r: &mut [NumT],
   input: &[NumT],
@@ -171,7 +171,7 @@ pub fn ta_zscore<NumT: Float + Send + Sync + Debug>(
 
   if ctx.groups() < 2 {
     // Fall back to rolling zscore with full window
-    return ta_ts_zscore(ctx, r, input, 0);
+    return ta_zscore(ctx, r, input, 0);
   }
 
   if r.len() != group_size * groups {
@@ -252,7 +252,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_zscore(&ctx, &mut r, &input, periods).unwrap();
+    ta_zscore(&ctx, &mut r, &input, periods).unwrap();
 
     // Window [1,2,3]: mean=2, std=1. zscore(3)=(3-2)/1=1
     // Window [2,3,4]: mean=3, std=1. zscore(4)=(4-3)/1=1
@@ -266,7 +266,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_zscore(&ctx, &mut r, &input, periods).unwrap();
+    ta_zscore(&ctx, &mut r, &input, periods).unwrap();
 
     // Window [3,2,1]: mean=2, std=1. zscore(1)=(1-2)/1=-1
     assert_vec_eq_nan(&r, &vec![f64::NAN, f64::NAN, -1.0]);
@@ -278,7 +278,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_zscore(&ctx, &mut r, &input, periods).unwrap();
+    ta_zscore(&ctx, &mut r, &input, periods).unwrap();
 
     // All same -> std=0, zscore=0
     assert_vec_eq_nan(&r, &vec![f64::NAN, f64::NAN, 0.0]);
@@ -292,7 +292,7 @@ mod tests {
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 3, 0);
 
-    ta_zscore(&ctx, &mut r, &input).unwrap();
+    ta_cc_zscore(&ctx, &mut r, &input).unwrap();
 
     // j=0: values [1, 3, 5]. mean=3, std=2. z = [-1, 0, 1]
     // j=1: values [10, 20, 30]. mean=20, std=10. z = [-1, 0, 1]
@@ -306,7 +306,7 @@ mod tests {
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 3, 0);
 
-    ta_zscore(&ctx, &mut r, &input).unwrap();
+    ta_cc_zscore(&ctx, &mut r, &input).unwrap();
 
     // j=0: values [1, NaN, 5]. valid=[1,5], mean=3, std=sqrt(8)=2*sqrt(2)
     // z(1) = (1-3)/(2*sqrt(2)) = -2/(2*sqrt(2)) = -1/sqrt(2) = -0.707106...

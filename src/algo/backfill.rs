@@ -10,7 +10,7 @@ use crate::algo::{Context, Error, is_normal};
 ///
 /// Iterates forward through each group; if x[i] is NaN, copies the last valid value.
 /// Leading NaNs (before any valid value) remain NaN.
-pub fn ta_ts_backfill<NumT: Float + Send + Sync>(
+pub fn ta_backfill<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [NumT],
   input: &[NumT],
@@ -49,7 +49,7 @@ pub fn ta_ts_backfill<NumT: Float + Send + Sync>(
 /// Count number of NaN values in a rolling window
 ///
 /// For each position, counts the number of NaN values in the preceding `periods` elements.
-pub fn ta_ts_count_nans<NumT: Float + Send + Sync>(
+pub fn ta_count_nans<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [NumT],
   input: &[NumT],
@@ -112,7 +112,7 @@ mod tests {
     let input = vec![1.0, f64::NAN, f64::NAN, 4.0, f64::NAN];
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_backfill(&ctx, &mut r, &input).unwrap();
+    ta_backfill(&ctx, &mut r, &input).unwrap();
 
     assert_vec_eq_nan(&r, &vec![1.0, 1.0, 1.0, 4.0, 4.0]);
   }
@@ -122,7 +122,7 @@ mod tests {
     let input = vec![f64::NAN, f64::NAN, 3.0, f64::NAN];
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_backfill(&ctx, &mut r, &input).unwrap();
+    ta_backfill(&ctx, &mut r, &input).unwrap();
 
     assert_vec_eq_nan(&r, &vec![f64::NAN, f64::NAN, 3.0, 3.0]);
   }
@@ -132,7 +132,7 @@ mod tests {
     let input = vec![1.0, 2.0, 3.0];
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_backfill(&ctx, &mut r, &input).unwrap();
+    ta_backfill(&ctx, &mut r, &input).unwrap();
 
     assert_vec_eq_nan(&r, &vec![1.0, 2.0, 3.0]);
   }
@@ -143,7 +143,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_count_nans(&ctx, &mut r, &input, periods).unwrap();
+    ta_count_nans(&ctx, &mut r, &input, periods).unwrap();
 
     // 0: [1] -> 0
     // 1: [1, NaN] -> 1
@@ -159,7 +159,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_count_nans(&ctx, &mut r, &input, periods).unwrap();
+    ta_count_nans(&ctx, &mut r, &input, periods).unwrap();
 
     assert_vec_eq_nan(&r, &vec![0.0, 0.0, 0.0, 0.0]);
   }
@@ -170,7 +170,7 @@ mod tests {
     let periods = 2;
     let mut r = vec![0.0; input.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_ts_count_nans(&ctx, &mut r, &input, periods).unwrap();
+    ta_count_nans(&ctx, &mut r, &input, periods).unwrap();
 
     assert_vec_eq_nan(&r, &vec![1.0, 2.0, 2.0]);
   }

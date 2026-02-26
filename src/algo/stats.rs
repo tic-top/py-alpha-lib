@@ -307,10 +307,10 @@ pub fn ta_cov<NumT: Float + Send + Sync>(
   Ok(())
 }
 
-/// Calculate Correlation over a moving window
+/// Calculate two series correlation over a moving window
 ///
 /// Correlation = Cov(X, Y) / (StdDev(X) * StdDev(Y))
-pub fn ta_corr<NumT: Float + Send + Sync>(
+pub fn ta_corr2<NumT: Float + Send + Sync>(
   ctx: &Context,
   r: &mut [NumT],
   x: &[NumT],
@@ -916,7 +916,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; x.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_corr(&ctx, &mut r, &x, &y, periods).unwrap();
+    ta_corr2(&ctx, &mut r, &x, &y, periods).unwrap();
 
     assert_vec_eq_nan(&r, &vec![f64::NAN, f64::NAN, 1.0, 1.0, 1.0]);
   }
@@ -928,7 +928,7 @@ mod tests {
     let periods = 3;
     let mut r = vec![0.0; x.len()];
     let ctx = Context::new(0, 0, 0);
-    ta_corr(&ctx, &mut r, &x, &y, periods).unwrap();
+    ta_corr2(&ctx, &mut r, &x, &y, periods).unwrap();
     assert_vec_eq_nan(&r, &vec![f64::NAN, f64::NAN, -1.0]);
   }
 
