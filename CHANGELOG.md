@@ -1,5 +1,19 @@
 # ChangeLog
 
+
+## [0.2.0] - 2026-02-26
+
+### Change
+
+- Naming Rules for algorithms
+    - Functions without prefix means it is a rolling window operation
+    - Functions with prefix `CC_` means it is a cross-commodity/cross-security/cross-group operation
+
+### Add 
+
+- Context now have a `end` option, which can be used to specify the end index of the calculation. usually used in iterative back test to improve some performance.
+
+
 ## [0.1.3] - 2026-02-22
 
 

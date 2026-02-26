@@ -149,7 +149,7 @@ Benchmark scripts in [`benchmarks/`](benchmarks/).
 
 ### Supported Algorithms
 
-Nameing Rules:
+Naming Rules:
 
 - Function starts with `CC_` means it is a cross-commodity/cross-security/cross-group operation.
 - Function without prefix means it is a rolling window operation.
@@ -157,53 +157,55 @@ Nameing Rules:
 
 | Name | Description |
 |---|---|
-| BARSLAST | Bars since last condition true |
-| BARSSINCE | Bars since first condition true |
-| BINS | Discretize input into n bins |
-| CORR | Rolling correlation |
-| COUNT | Count of true values in window |
-| COV | Rolling covariance |
-| CROSS | Golden cross detection (A crosses above B) |
-| DMA | Exponential moving average (custom weight) |
-| EMA | Exponential moving average (weight = 2/(n+1)) |
-| FRET | Future return calculation |
-| GROUP_RANK | Rank percentage within category group |
-| GROUP_ZSCORE | Z-score within category group |
-| HHV / LLV | Highest / lowest value in window |
-| HHVBARS / LLVBARS | Bars since highest / lowest value |
-| INTERCEPT | Linear regression intercept |
-| LONGCROSS | A < B for N periods then A >= B |
-| LWMA | Linear weighted moving average |
-| MA | Simple moving average |
-| NEUTRALIZE | Neutralize categorical effect |
-| PRODUCT | Rolling product |
-| RANK | Cross-sectional rank (percentage) |
-| RCROSS | Death cross detection (A crosses below B) |
-| REF | Shift array by N periods |
-| REGBETA | Regression coefficient (beta) |
-| REGRESI | Regression residual |
-| RLONGCROSS | A > B for N periods then A <= B |
-| SCAN_ADD | Conditional cumulative sum (SELF recursion) |
-| SCAN_MUL | Conditional cumulative product (SELF recursion) |
-| SLOPE | Linear regression slope |
-| SMA | EMA variant (weight = m/n) |
-| STDDEV | Rolling standard deviation |
-| SUM | Rolling sum (0 = cumulative) |
-| SUMBARS | Bars until sum reaches threshold |
-| SUMIF | Conditional rolling sum |
-| TS_BACKFILL | Forward-fill NaN with last valid value |
-| TS_CORR | Time series correlation |
-| TS_COUNT_NANS | Rolling count of NaN values in window |
-| TS_ENTROPY | Rolling Shannon entropy over binned window |
-| TS_KURTOSIS | Rolling excess kurtosis (Fisher-adjusted) |
-| TS_MIN_MAX_DIFF | Rolling range (max - min) over window |
-| TS_MOMENT | Rolling k-th central moment |
-| TS_RANK | Rank within sliding window |
-| TS_SKEWNESS | Rolling skewness (Fisher-Pearson adjusted) |
-| TS_WEIGHTED_DELAY | Exponentially weighted lag (LWMA of lagged series) |
-| TS_ZSCORE | Rolling z-score over window |
-| VAR | Rolling variance |
-| ZSCORE | Cross-sectional z-score |
+| BACKFILL | Forward-fill NaN values with the last valid observation |
+| BARSLAST | Calculate number of bars since last condition true |
+| BARSSINCE | Calculate number of bars since first condition true |
+| BINS | Discretize the input into n bins, the ctx.groups() is the number of groups |
+| CC_RANK | Calculate rank percentage cross group dimension, the ctx.groups() is the number of groups Same value are averaged |
+| CC_ZSCORE | Calculate cross-sectional Z-Score across groups at each time step |
+| CORR | Time Series Correlation in moving window on self |
+| CORR2 | Calculate two series correlation over a moving window |
+| COUNT | Calculate number of periods where condition is true in passed `periods` window |
+| COUNT_NANS | Count number of NaN values in a rolling window |
+| COV | Calculate Covariance over a moving window |
+| CROSS | For 2 arrays A and B, return true if A[i-1] < B[i-1] and A[i] >= B[i] alias: golden_cross, cross_ge |
+| DMA | Exponential Moving Average current = weight * current + (1 - weight) * previous |
+| EMA | Exponential Moving Average (variant of well-known EMA) weight = 2 / (n + 1) |
+| ENTROPY | Calculate rolling Shannon entropy over a moving window |
+| FRET | Future Return |
+| GROUP_RANK | Calculate rank percentage within each category group at each time step |
+| GROUP_ZSCORE | Calculate Z-Score within each category group at each time step |
+| HHV | Find highest value in a preceding `periods` window |
+| HHVBARS | The number of periods that have passed since the array reached its `periods` period high |
+| INTERCEPT | Linear Regression Intercept |
+| KURTOSIS | Calculate rolling sample excess Kurtosis over a moving window |
+| LLV | Find lowest value in a preceding `periods` window |
+| LLVBARS | The number of periods that have passed since the array reached its periods period low |
+| LONGCROSS | For 2 arrays A and B, return true if previous N periods A < B, Current A >= B |
+| LWMA | Linear Weighted Moving Average |
+| MA | Simple Moving Average, also known as arithmetic moving average |
+| MIN_MAX_DIFF | Calculate rolling min-max difference (range) over a moving window |
+| MOMENT | Calculate rolling k-th central moment over a moving window |
+| NEUTRALIZE | Neutralize the effect of a categorical variable on a numeric variable |
+| PRODUCT | Calculate product of values in preceding `periods` window |
+| RANK | Calculate rank in a sliding window with size `periods` |
+| RCROSS | For 2 arrays A and B, return true if A[i-1] > B[i-1] and A[i] <= B[i] alias: death_cross, cross_le |
+| REF | Right shift input array by `periods`, r[i] = input[i - periods] |
+| REGBETA | Calculate Regression Coefficient (Beta) of Y on X over a moving window |
+| REGRESI | Calculate Regression Residual of Y on X over a moving window |
+| RLONGCROSS | For 2 arrays A and B, return true if previous N periods A > B, Current A <= B |
+| SCAN_ADD | Conditional cumulative add: r[t] = r[t-1] + (cond[t] ? input[t] : 0) |
+| SCAN_MUL | Conditional cumulative multiply: r[t] = r[t-1] * (cond[t] ? input[t] : 1) |
+| SKEWNESS | Calculate rolling sample Skewness over a moving window |
+| SLOPE | Linear Regression Slope |
+| SMA | Exponential Moving Average (variant of well-known EMA) weight = m / n |
+| STDDEV | Calculate Standard Deviation over a moving window |
+| SUM | Calculate sum of values in preceding `periods` window |
+| SUMBARS | Calculate number of periods (bars) backwards until the sum of values is greater than or equal to `amount` |
+| SUMIF | Calculate sum of values in preceding `periods` window where `condition` is true |
+| VAR | Calculate Variance over a moving window |
+| WEIGHTED_DELAY | Calculate weighted delay (exponentially weighted lag) |
+| ZSCORE | Calculate rolling Z-Score over a moving window |
 
 Full function signatures: [python/alpha/algo.md](python/alpha/algo.md)
 
