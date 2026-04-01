@@ -461,6 +461,14 @@ class ExecContext:
     def ROLLING_SELMEAN_DIFF(self, x: np.ndarray, y: np.ndarray, d: int, n: int) -> np.ndarray:
         return alpha.SELMEAN_DIFF(x, y, int(d), int(n))
 
+    # ── Composite Operators (开源证券) ─────────────────────────────────
+
+    def TS_MEANRANK(self, x: np.ndarray, d: int) -> np.ndarray:
+        return alpha.MA(alpha.CC_RANK(x), int(d))
+
+    def DIFF_SIGN(self, x: np.ndarray, d: int) -> np.ndarray:
+        return np.sign(x - alpha.MA(x, int(d)))
+
     # ====================================================================
     #  Cross-Sectional Operators (no prefix)
     #
