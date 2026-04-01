@@ -157,6 +157,7 @@ Naming Rules:
 
 | Name | Description |
 |---|---|
+| AVEDEV | Rolling mean absolute deviation over a window |
 | BACKFILL | Forward-fill NaN values with the last valid observation |
 | BARSLAST | Calculate number of bars since last condition true |
 | BARSSINCE | Calculate number of bars since first condition true |
