@@ -787,6 +787,71 @@ def SCAN_MUL(
     _algo.scan_mul(r, input, condition)
     return r
 
+def SELMEAN_BTM(
+  x: np.ndarray | list[np.ndarray], y: np.ndarray | list[np.ndarray], periods: int, n: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Mean of x for the bottom-n rows ranked by y over a rolling window of `periods`.
+  
+  selmean_btm(x, y, d, n): over the past d periods, sort by y ascending, take
+  the bottom n rows, return mean(x) of those rows.
+  """
+  if isinstance(x, list) and isinstance(y, list):
+    x = [_to_f64(x) for x in x]
+    y = [_to_f64(x) for x in y]
+    r = [np.empty_like(x) for x in x]
+    _algo.selmean_btm(r, x, y, periods, n)
+    return r
+  else:
+    x = _to_f64(x)
+    y = _to_f64(y)
+    r = np.empty_like(x)
+    _algo.selmean_btm(r, x, y, periods, n)
+    return r
+
+def SELMEAN_DIFF(
+  x: np.ndarray | list[np.ndarray], y: np.ndarray | list[np.ndarray], periods: int, n: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Difference between top-n mean and bottom-n mean of x ranked by y.
+  
+  selmean_diff(x, y, d, n) = selmean_top(x, y, d, n) − selmean_btm(x, y, d, n)
+  """
+  if isinstance(x, list) and isinstance(y, list):
+    x = [_to_f64(x) for x in x]
+    y = [_to_f64(x) for x in y]
+    r = [np.empty_like(x) for x in x]
+    _algo.selmean_diff(r, x, y, periods, n)
+    return r
+  else:
+    x = _to_f64(x)
+    y = _to_f64(y)
+    r = np.empty_like(x)
+    _algo.selmean_diff(r, x, y, periods, n)
+    return r
+
+def SELMEAN_TOP(
+  x: np.ndarray | list[np.ndarray], y: np.ndarray | list[np.ndarray], periods: int, n: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Mean of x for the top-n rows ranked by y over a rolling window of `periods`.
+  
+  selmean_top(x, y, d, n): over the past d periods, sort by y ascending, take
+  the top n rows, return mean(x) of those rows.
+  """
+  if isinstance(x, list) and isinstance(y, list):
+    x = [_to_f64(x) for x in x]
+    y = [_to_f64(x) for x in y]
+    r = [np.empty_like(x) for x in x]
+    _algo.selmean_top(r, x, y, periods, n)
+    return r
+  else:
+    x = _to_f64(x)
+    y = _to_f64(y)
+    r = np.empty_like(x)
+    _algo.selmean_top(r, x, y, periods, n)
+    return r
+
 def SKEWNESS(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:
