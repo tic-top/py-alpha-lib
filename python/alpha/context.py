@@ -476,6 +476,60 @@ class ExecContext:
     def DIFF_SIGN(self, x: np.ndarray, d: int) -> np.ndarray:
         return np.sign(x - alpha.MA(x, int(d)))
 
+    # ── Technical Indicators (multi-field composites) ───────────────────
+
+    def RSI(self, x: np.ndarray, w: int) -> np.ndarray:
+        """Cutler's RSI (SMA-based): 100 - 100/(1 + avg_gain/avg_loss)."""
+        delta = x - alpha.REF(x, 1)
+        avg_gain = alpha.MA(np.maximum(delta, 0.0), int(w))
+        avg_loss = alpha.MA(np.maximum(-delta, 0.0), int(w))
+        rs = avg_gain / np.where(avg_loss > 1e-12, avg_loss, 1e-12)
+        return 100.0 - 100.0 / (1.0 + rs)
+
+    def ATR(self, high: np.ndarray, low: np.ndarray, close: np.ndarray, w: int) -> np.ndarray:
+        """Average True Range."""
+        prev_close = alpha.REF(close, 1)
+        tr = np.maximum(high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close)))
+        return alpha.MA(tr, int(w))
+
+    def OBV(self, close: np.ndarray, open_p: np.ndarray, volume: np.ndarray, w: int) -> np.ndarray:
+        """On-Balance Volume: rolling sum of signed volume."""
+        return alpha.SUM(np.sign(close - open_p) * volume, int(w))
+
+    def PRESSURE(
+        self, high: np.ndarray, low: np.ndarray, close: np.ndarray, volume: np.ndarray, w: int
+    ) -> np.ndarray:
+        """Pressure Index: (close-low)/ATR * rel_vol - (high-close)/ATR * rel_vol."""
+        atr = self.ATR(high, low, close, int(w))
+        atr_safe = np.where(atr > 1e-10, atr, 1e-10)
+        avg_vol = alpha.MA(volume, int(w))
+        rel_vol = volume / np.where(avg_vol > 1e-10, avg_vol, 1e-10)
+        return ((close - low) / atr_safe - (high - close) / atr_safe) * rel_vol
+
+    def AMIHUD(self, close: np.ndarray, volume: np.ndarray, w: int) -> np.ndarray:
+        """Amihud illiquidity: MA(|return| / volume, w)."""
+        ret_abs = np.abs(
+            close / np.where(alpha.REF(close, 1) > 1e-10, alpha.REF(close, 1), 1e-10) - 1.0
+        )
+        return alpha.MA(ret_abs / np.where(volume > 0, volume, np.nan), int(w))
+
+    def KYLE_LAMBDA(self, close: np.ndarray, volume: np.ndarray, w: int) -> np.ndarray:
+        """Kyle's lambda: Cov(delta_price, signed_vol) / Var(signed_vol)."""
+        dp = close - alpha.REF(close, 1)
+        sv = np.sign(dp) * volume
+        var = alpha.VAR(sv, int(w))
+        return alpha.COV(dp, sv, int(w)) / np.where(np.abs(var) > 1e-10, var, 1e-10)
+
+    def VPIN(self, close: np.ndarray, open_p: np.ndarray, volume: np.ndarray, w: int) -> np.ndarray:
+        """VPIN proxy: |sum(signed_vol, w)| / sum(volume, w)."""
+        sv = np.sign(close - open_p) * volume
+        sum_v = alpha.SUM(volume, int(w))
+        return np.abs(alpha.SUM(sv, int(w))) / np.where(sum_v > 0, sum_v, 1.0)
+
+    def ROLLING_VWAP(self, close: np.ndarray, volume: np.ndarray, w: int) -> np.ndarray:
+        """Rolling volume-weighted average price: SUM(close*volume, w) / SUM(volume, w)."""
+        return alpha.SUM(close * volume, int(w)) / alpha.SUM(volume, int(w))
+
     # ====================================================================
     #  Cross-Sectional Operators (no prefix)
     #
