@@ -542,6 +542,27 @@ def MA(
     _algo.ma(r, input, periods)
     return r
 
+def MEDIAN(
+  input: np.ndarray | list[np.ndarray], periods: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Calculate median over a moving window.
+  
+  For each position, collects valid (non-NaN) values in the window,
+  sorts them, and returns the middle value (average of two middle values
+  if the count is even).
+  """
+  if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
+    r = [np.empty_like(x) for x in input]
+    _algo.median(r, input, periods)
+    return r
+  else:
+    input = _to_f64(input)
+    r = np.empty_like(input)
+    _algo.median(r, input, periods)
+    return r
+
 def MIN_MAX_DIFF(
   input: np.ndarray | list[np.ndarray], periods: int
 ) -> np.ndarray | list[np.ndarray]:

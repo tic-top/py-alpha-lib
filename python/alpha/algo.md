@@ -29,6 +29,7 @@ the `np.ndarray` is `ndarray` type in `numpy` package
 - LONGCROSS(a: np.ndarray[float], b: np.ndarray[float], n: int): For 2 arrays A and B, return true if previous N periods A < B, Current A >= B
 - LWMA(input: np.ndarray[float], periods: int): Linear Weighted Moving Average  LWMA = SUM(Price * Weight) / SUM(Weight)
 - MA(input: np.ndarray[float], periods: int): Simple Moving Average, also known as arithmetic moving average
+- MEDIAN(input: np.ndarray[float], periods: int): Calculate median over a moving window.  For each position, collects valid (non-NaN) values in the window, sorts them, and returns the middle value (average of two middle values if the count is even).
 - MIN_MAX_DIFF(input: np.ndarray[float], periods: int): Calculate rolling min-max difference (range) over a moving window  TS_MIN_MAX_DIFF = TS_MAX(x, d) - TS_MIN(x, d) Single-pass using two monotonic deques for efficiency.
 - MOMENT(input: np.ndarray[float], periods: int, k: int): Calculate rolling k-th central moment over a moving window  MOMENT(x, d, k) = mean((x - mean)^k) over window of d periods. This is the raw (non-adjusted) sample moment. k=2 gives variance (population), k=3 gives raw third moment, etc.
 - NEUTRALIZE(category: np.ndarray[float], input: np.ndarray[float]): Neutralize the effect of a categorical variable on a numeric variable
