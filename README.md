@@ -196,6 +196,9 @@ Naming Rules:
 | RLONGCROSS | For 2 arrays A and B, return true if previous N periods A > B, Current A <= B |
 | SCAN_ADD | Conditional cumulative add: r[t] = r[t-1] + (cond[t] ? input[t] : 0) |
 | SCAN_MUL | Conditional cumulative multiply: r[t] = r[t-1] * (cond[t] ? input[t] : 1) |
+| SELMEAN_BTM | Mean of x for the bottom-n rows ranked by y over a rolling window (切割算子) |
+| SELMEAN_TOP | Mean of x for the top-n rows ranked by y over a rolling window (切割算子) |
+| SELMEAN_DIFF | Difference between top-n mean and bottom-n mean of x ranked by y (切割算子) |
 | SKEWNESS | Calculate rolling sample Skewness over a moving window |
 | SLOPE | Linear Regression Slope |
 | SMA | Exponential Moving Average (variant of well-known EMA) weight = m / n |

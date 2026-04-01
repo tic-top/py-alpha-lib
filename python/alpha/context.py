@@ -32,505 +32,509 @@ logger = logging.getLogger(__name__)
 
 
 def _returns(a: np.ndarray) -> np.ndarray:
-  return a / alpha.REF(a, 1) - 1
+    return a / alpha.REF(a, 1) - 1
 
 
 def _extract_cols(data, cols):
-  """Extract columns as numpy arrays (polars or pandas)."""
-  out = {}
-  for c in cols:
-    out[c] = data[c].to_numpy()
-  return out
+    """Extract columns as numpy arrays (polars or pandas)."""
+    out = {}
+    for c in cols:
+        out[c] = data[c].to_numpy()
+    return out
 
 
 def _fill_panel(data, securities, trades, cols):
-  """Extract columns, padding incomplete panels with NaN via numpy scatter.
+    """Extract columns, padding incomplete panels with NaN via numpy scatter.
 
-  Returns a dict {col_name: np.ndarray} of length securities*trades.
-  Zero-copy when the panel is already complete.
-  """
-  expected = securities * trades
-  actual = len(data)
-  if actual == expected:
-    return _extract_cols(data, cols)
+    Returns a dict {col_name: np.ndarray} of length securities*trades.
+    Zero-copy when the panel is already complete.
+    """
+    expected = securities * trades
+    actual = len(data)
+    if actual == expected:
+        return _extract_cols(data, cols)
 
-  # Build flat index: row i → security_idx * trades + trade_idx
-  # Use the DataFrame engine for fast categorical mapping, then numpy
-  try:
-    flat_idx = (
-      data.select(
-        (data["securityid"].rank("dense") - 1).cast(int) * trades
-        + (data["tradetime"].rank("dense") - 1).cast(int)
-      )
-      .to_series()
-      .to_numpy()
-    )
-  except Exception:
-    import pandas as pd
+    # Build flat index: row i → security_idx * trades + trade_idx
+    # Use the DataFrame engine for fast categorical mapping, then numpy
+    try:
+        flat_idx = (
+            data.select(
+                (data["securityid"].rank("dense") - 1).cast(int) * trades
+                + (data["tradetime"].rank("dense") - 1).cast(int)
+            )
+            .to_series()
+            .to_numpy()
+        )
+    except Exception:
+        import pandas as pd
 
-    sid = data["securityid"]
-    tid = data["tradetime"]
-    flat_idx = (
-      sid.astype("category").cat.codes.values * trades
-      + tid.astype("category").cat.codes.values
-    )
+        sid = data["securityid"]
+        tid = data["tradetime"]
+        flat_idx = (
+            sid.astype("category").cat.codes.values * trades
+            + tid.astype("category").cat.codes.values
+        )
 
-  out = {}
-  for c in cols:
-    target = np.full(expected, np.nan, dtype=np.float64)
-    target[flat_idx] = data[c].to_numpy()
-    out[c] = target
+    out = {}
+    for c in cols:
+        target = np.full(expected, np.nan, dtype=np.float64)
+        target[flat_idx] = data[c].to_numpy()
+        out[c] = target
 
-  n_missing = expected - actual
-  logger.warning(
-    "Filled %d missing rows to complete %d×%d panel", n_missing, securities, trades
-  )
-  return out
+    n_missing = expected - actual
+    logger.warning("Filled %d missing rows to complete %d×%d panel", n_missing, securities, trades)
+    return out
 
 
 class ExecContext:
-  """
-  Unified execution context for alpha factor expressions.
+    """
+    Unified execution context for alpha factor expressions.
 
-  Provides:
-    - OHLCV data fields (OPEN, HIGH, LOW, CLOSE, VOLUME, VWAP)
-    - Derived fields (RETURNS/RET, DTM, DBM, TR, HD, LD, SEQUENCE)
-    - All operator methods used by wq101, gtja191, and WQ BRAIN transpiler output
-    - Dynamic ADV{n} access (average daily dollar volume over n days, per paper definition)
-    - Variable aliases (AMOUNT=VOLUME, VOL=VOLUME)
+    Provides:
+      - OHLCV data fields (OPEN, HIGH, LOW, CLOSE, VOLUME, VWAP)
+      - Derived fields (RETURNS/RET, DTM, DBM, TR, HD, LD, SEQUENCE)
+      - All operator methods used by wq101, gtja191, and WQ BRAIN transpiler output
+      - Dynamic ADV{n} access (average daily dollar volume over n days, per paper definition)
+      - Variable aliases (AMOUNT=VOLUME, VOL=VOLUME)
 
-  Args:
-    data: DataFrame (polars or pandas) with columns: open, high, low, close, vol, vwap
-    securities: Number of securities (stocks). Auto-inferred if 0.
-    trades: Number of trading days. Auto-inferred if 0.
-    fill: If True (default), pad missing rows with NaN to complete the panel.
-  """
+    Args:
+      data: DataFrame (polars or pandas) with columns: open, high, low, close, vol, vwap
+      securities: Number of securities (stocks). Auto-inferred if 0.
+      trades: Number of trading days. Auto-inferred if 0.
+      fill: If True (default), pad missing rows with NaN to complete the panel.
+    """
 
-  def __init__(self, data, securities: int = 0, trades: int = 0, fill: bool = True):
-    # Auto-infer securities and trades from data columns
-    if securities == 0 and trades == 0:
-      try:
-        securities = data["securityid"].n_unique()
-        trades = data["tradetime"].n_unique()
-      except Exception:
+    def __init__(self, data, securities: int = 0, trades: int = 0, fill: bool = True):
+        # Auto-infer securities and trades from data columns
+        if securities == 0 and trades == 0:
+            try:
+                securities = data["securityid"].n_unique()
+                trades = data["tradetime"].n_unique()
+            except Exception:
+                try:
+                    securities = data["securityid"].nunique()
+                    trades = data["tradetime"].nunique()
+                except Exception:
+                    pass
+
+        if securities > 0:
+            alpha.set_ctx(groups=securities)
+
+        # Extract OHLCV arrays, filling incomplete panels with NaN
+        _cols = ["open", "high", "low", "close", "vol", "vwap"]
+        # Include indclass if available in data
+        _has_indclass = False
+        _has_cap = False
         try:
-          securities = data["securityid"].nunique()
-          trades = data["tradetime"].nunique()
+            _ = data["indclass"]
+            _has_indclass = True
+            _cols.append("indclass")
         except Exception:
-          pass
-
-    if securities > 0:
-      alpha.set_ctx(groups=securities)
-
-    # Extract OHLCV arrays, filling incomplete panels with NaN
-    _cols = ["open", "high", "low", "close", "vol", "vwap"]
-    # Include indclass if available in data
-    _has_indclass = False
-    _has_cap = False
-    try:
-      _ = data["indclass"]
-      _has_indclass = True
-      _cols.append("indclass")
-    except Exception:
-      pass
-    try:
-      _ = data["cap"]
-      _has_cap = True
-      _cols.append("cap")
-    except Exception:
-      pass
-
-    if fill and securities > 0 and trades > 0:
-      d = _fill_panel(data, securities, trades, _cols)
-    else:
-      d = _extract_cols(data, _cols)
-
-    self.OPEN = d["open"]
-    self.HIGH = d["high"]
-    self.LOW = d["low"]
-    self.CLOSE = d["close"]
-    self.VOLUME = d["vol"].astype(np.float64)
-    self.VWAP = d["vwap"]
-
-    if _has_indclass:
-      indclass = d["indclass"]
-      self.INDCLASS_SUBINDUSTRY = indclass
-      self.INDCLASS_INDUSTRY = np.floor(indclass / 10000)
-      self.INDCLASS_SECTOR = np.floor(indclass / 1000000)
-    if _has_cap:
-      self.CAP = d["cap"].astype(np.float64)
-    self.RETURNS = _returns(self.CLOSE)
-    self.RET = self.RETURNS
-
-    if securities > 0 and trades > 0:
-      self.BANCHMARKINDEXCLOSE = np.repeat(self.CLOSE[0:trades], securities)
-      self.BANCHMARKINDEXOPEN = np.repeat(self.OPEN[0:trades], securities)
-      self.DTM = self._calc_DTM()
-      self.DBM = self._calc_DBM()
-      self.TR = self._calc_TR()
-      self.HD = self.HIGH - alpha.REF(self.HIGH, 1)
-      self.LD = self.LOW - alpha.REF(self.LOW, 1)
-      self._SEQUENCE = np.tile(np.arange(1, trades + 1, dtype=np.float64), securities)
-
-  def __call__(self, name: str) -> np.ndarray:
-    if name.startswith("ADV"):
-      n = name[3:]
-      if len(n) == 0:
-        return self.VOLUME
-      return alpha.MA(self.VOLUME, int(n))
-    if name.startswith("INDCLASS."):
-      return getattr(self, name.replace(".", "_"))
-    if name == "AMOUNT" or name == "VOL":
-      return self.VOLUME
-    if name == "SEQUENCE":
-      return self._SEQUENCE
-    return getattr(self, name)
-
-  # ── Derived field helpers ──────────────────────────────────────────
-
-  def _calc_DTM(self):
-    return np.where(
-      self.OPEN <= alpha.REF(self.OPEN, 1),
-      0,
-      np.maximum(self.HIGH - self.OPEN, self.OPEN - alpha.REF(self.OPEN, 1)),
-    )
-
-  def _calc_DBM(self):
-    return np.where(
-      self.OPEN >= alpha.REF(self.OPEN, 1),
-      0,
-      np.maximum(self.OPEN - self.LOW, self.OPEN - alpha.REF(self.OPEN, 1)),
-    )
-
-  def _calc_TR(self):
-    return np.maximum(
-      np.maximum(
-        self.HIGH - self.LOW,
-        np.abs(self.HIGH - alpha.REF(self.CLOSE, 1)),
-      ),
-      np.abs(self.LOW - alpha.REF(self.CLOSE, 1)),
-    )
-
-  # ====================================================================
-  #  TS_ — Time-Series / Rolling Window Operators
-  #
-  #  Canonical form: TS_XXX(x, d)
-  #  All rolling-window operators use the TS_ prefix.
-  # ====================================================================
-
-  # ── TS: Sum ─────────────────────────────────────────────────────────
-  #   BRAIN: ts_sum        GTJA: SUM, SUMAC        AmiBroker: SUM
+            pass
+        try:
+            _ = data["cap"]
+            _has_cap = True
+            _cols.append("cap")
+        except Exception:
+            pass
+
+        if fill and securities > 0 and trades > 0:
+            d = _fill_panel(data, securities, trades, _cols)
+        else:
+            d = _extract_cols(data, _cols)
+
+        self.OPEN = d["open"]
+        self.HIGH = d["high"]
+        self.LOW = d["low"]
+        self.CLOSE = d["close"]
+        self.VOLUME = d["vol"].astype(np.float64)
+        self.VWAP = d["vwap"]
+
+        if _has_indclass:
+            indclass = d["indclass"]
+            self.INDCLASS_SUBINDUSTRY = indclass
+            self.INDCLASS_INDUSTRY = np.floor(indclass / 10000)
+            self.INDCLASS_SECTOR = np.floor(indclass / 1000000)
+        if _has_cap:
+            self.CAP = d["cap"].astype(np.float64)
+        self.RETURNS = _returns(self.CLOSE)
+        self.RET = self.RETURNS
+
+        if securities > 0 and trades > 0:
+            self.BANCHMARKINDEXCLOSE = np.repeat(self.CLOSE[0:trades], securities)
+            self.BANCHMARKINDEXOPEN = np.repeat(self.OPEN[0:trades], securities)
+            self.DTM = self._calc_DTM()
+            self.DBM = self._calc_DBM()
+            self.TR = self._calc_TR()
+            self.HD = self.HIGH - alpha.REF(self.HIGH, 1)
+            self.LD = self.LOW - alpha.REF(self.LOW, 1)
+            self._SEQUENCE = np.tile(np.arange(1, trades + 1, dtype=np.float64), securities)
+
+    def __call__(self, name: str) -> np.ndarray:
+        if name.startswith("ADV"):
+            n = name[3:]
+            if len(n) == 0:
+                return self.VOLUME
+            return alpha.MA(self.VOLUME, int(n))
+        if name.startswith("INDCLASS."):
+            return getattr(self, name.replace(".", "_"))
+        if name == "AMOUNT" or name == "VOL":
+            return self.VOLUME
+        if name == "SEQUENCE":
+            return self._SEQUENCE
+        return getattr(self, name)
+
+    # ── Derived field helpers ──────────────────────────────────────────
+
+    def _calc_DTM(self):
+        return np.where(
+            self.OPEN <= alpha.REF(self.OPEN, 1),
+            0,
+            np.maximum(self.HIGH - self.OPEN, self.OPEN - alpha.REF(self.OPEN, 1)),
+        )
+
+    def _calc_DBM(self):
+        return np.where(
+            self.OPEN >= alpha.REF(self.OPEN, 1),
+            0,
+            np.maximum(self.OPEN - self.LOW, self.OPEN - alpha.REF(self.OPEN, 1)),
+        )
+
+    def _calc_TR(self):
+        return np.maximum(
+            np.maximum(
+                self.HIGH - self.LOW,
+                np.abs(self.HIGH - alpha.REF(self.CLOSE, 1)),
+            ),
+            np.abs(self.LOW - alpha.REF(self.CLOSE, 1)),
+        )
+
+    # ====================================================================
+    #  TS_ — Time-Series / Rolling Window Operators
+    #
+    #  Canonical form: TS_XXX(x, d)
+    #  All rolling-window operators use the TS_ prefix.
+    # ====================================================================
+
+    # ── TS: Sum ─────────────────────────────────────────────────────────
+    #   BRAIN: ts_sum        GTJA: SUM, SUMAC        AmiBroker: SUM
+
+    def TS_SUM(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.SUM(a, int(w))
+
+    SUM = TS_SUM  # wq101 / gtja191 / AmiBroker
+    SUMAC = TS_SUM  # gtja191
+
+    # ── TS: Mean ────────────────────────────────────────────────────────
+    #   BRAIN: ts_mean       GTJA: MA, MEAN          AmiBroker: MA
+
+    def TS_MEAN(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.MA(a, int(w))
+
+    MA = TS_MEAN  # universal
+    MEAN = TS_MEAN  # wq101
 
-  def TS_SUM(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.SUM(a, int(w))
+    # ── TS: EMA family ──────────────────────────────────────────────────
+    #   Not in BRAIN canonical set, but widely used in GTJA/AmiBroker
 
-  SUM = TS_SUM  # wq101 / gtja191 / AmiBroker
-  SUMAC = TS_SUM  # gtja191
+    def EMA(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.EMA(a, int(w))
 
-  # ── TS: Mean ────────────────────────────────────────────────────────
-  #   BRAIN: ts_mean       GTJA: MA, MEAN          AmiBroker: MA
+    def SMA(self, a, *args) -> np.ndarray:
+        """SMA with 2 args = simple MA, with 3 args = EMA variant (weight=m/n)."""
+        if len(args) == 1:
+            return alpha.MA(a, int(args[0]))
+        else:
+            return alpha.SMA(a, int(args[0]), int(args[1]))
 
-  def TS_MEAN(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.MA(a, int(w))
+    # ── TS: Std Dev / Variance ─────────────────────────────────────────
+    #   BRAIN: ts_std_dev    GTJA: STD               wq101: STDDEV
 
-  MA = TS_MEAN  # universal
-  MEAN = TS_MEAN  # wq101
+    def TS_STD_DEV(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.STDDEV(a, int(w))
 
-  # ── TS: EMA family ──────────────────────────────────────────────────
-  #   Not in BRAIN canonical set, but widely used in GTJA/AmiBroker
+    STDDEV = TS_STD_DEV  # wq101
+    STD = TS_STD_DEV  # gtja191
 
-  def EMA(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.EMA(a, int(w))
+    def TS_VARIANCE(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.VAR(a, int(w))
 
-  def SMA(self, a, *args) -> np.ndarray:
-    """SMA with 2 args = simple MA, with 3 args = EMA variant (weight=m/n)."""
-    if len(args) == 1:
-      return alpha.MA(a, int(args[0]))
-    else:
-      return alpha.SMA(a, int(args[0]), int(args[1]))
+    VAR = TS_VARIANCE  # gtja191
 
-  # ── TS: Std Dev / Variance ─────────────────────────────────────────
-  #   BRAIN: ts_std_dev    GTJA: STD               wq101: STDDEV
+    # ── TS: Correlation / Covariance (two-input) ───────────────────────
+    #   BRAIN: ts_correlation, ts_covariance
+    #   wq101: CORRELATION, COVARIANCE
+    #   GTJA:  CORR, COV
 
-  def TS_STD_DEV(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.STDDEV(a, int(w))
+    def TS_CORRELATION(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
+        return alpha.CORR2(a, b, int(w))
 
-  STDDEV = TS_STD_DEV  # wq101
-  STD = TS_STD_DEV  # gtja191
+    CORR = TS_CORRELATION  # gtja191
+    CORRELATION = TS_CORRELATION  # wq101
 
-  def TS_VARIANCE(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.VAR(a, int(w))
+    def TS_COVARIANCE(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
+        return alpha.COV(a, b, int(w))
 
-  VAR = TS_VARIANCE  # gtja191
+    COV = TS_COVARIANCE  # gtja191
+    COVARIANCE = TS_COVARIANCE  # wq101
 
-  # ── TS: Correlation / Covariance (two-input) ───────────────────────
-  #   BRAIN: ts_correlation, ts_covariance
-  #   wq101: CORRELATION, COVARIANCE
-  #   GTJA:  CORR, COV
+    # ── TS: Extremes ───────────────────────────────────────────────────
+    #   BRAIN: ts_max, ts_min, ts_argmax, ts_argmin
+    #   GTJA:  TSMAX, TSMIN, HIGHDAY, LOWDAY
+    #   AmiBroker: HHV, LLV, HHVBARS, LLVBARS
 
-  def TS_CORRELATION(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
-    return alpha.CORR2(a, b, int(w))
+    def TS_MAX(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.HHV(a, int(w))
 
-  CORR = TS_CORRELATION  # gtja191
-  CORRELATION = TS_CORRELATION  # wq101
+    TSMAX = TS_MAX  # gtja191
 
-  def TS_COVARIANCE(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
-    return alpha.COV(a, b, int(w))
+    def TS_MIN(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.LLV(a, int(w))
 
-  COV = TS_COVARIANCE  # gtja191
-  COVARIANCE = TS_COVARIANCE  # wq101
+    TSMIN = TS_MIN  # gtja191
 
-  # ── TS: Extremes ───────────────────────────────────────────────────
-  #   BRAIN: ts_max, ts_min, ts_argmax, ts_argmin
-  #   GTJA:  TSMAX, TSMIN, HIGHDAY, LOWDAY
-  #   AmiBroker: HHV, LLV, HHVBARS, LLVBARS
+    def TS_ARGMAX(self, a: np.ndarray, w: int) -> np.ndarray:
+        return int(w) - alpha.HHVBARS(a, int(w))
 
-  def TS_MAX(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.HHV(a, int(w))
+    def TS_ARGMIN(self, a: np.ndarray, w: int) -> np.ndarray:
+        return int(w) - alpha.LLVBARS(a, int(w))
 
-  TSMAX = TS_MAX  # gtja191
+    def HIGHDAY(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.HHVBARS(a, int(w))
 
-  def TS_MIN(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.LLV(a, int(w))
+    def LOWDAY(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.LLVBARS(a, int(w))
 
-  TSMIN = TS_MIN  # gtja191
+    # ── TS: Rank ───────────────────────────────────────────────────────
+    #   BRAIN: ts_rank       GTJA: TSRANK
 
-  def TS_ARGMAX(self, a: np.ndarray, w: int) -> np.ndarray:
-    return int(w) - alpha.HHVBARS(a, int(w))
+    def TS_RANK(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.RANK(a, int(w))
 
-  def TS_ARGMIN(self, a: np.ndarray, w: int) -> np.ndarray:
-    return int(w) - alpha.LLVBARS(a, int(w))
+    TSRANK = TS_RANK  # gtja191
 
-  def HIGHDAY(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.HHVBARS(a, int(w))
+    # ── TS: Delay / Delta ──────────────────────────────────────────────
+    #   BRAIN: ts_delay, ts_delta
+    #   wq101: DELAY, DELTA
+    #   AmiBroker: REF
 
-  def LOWDAY(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.LLVBARS(a, int(w))
+    def TS_DELAY(self, a: np.ndarray, p: int) -> np.ndarray:
+        return alpha.REF(a, int(p))
 
-  # ── TS: Rank ───────────────────────────────────────────────────────
-  #   BRAIN: ts_rank       GTJA: TSRANK
+    DELAY = TS_DELAY  # wq101
 
-  def TS_RANK(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.RANK(a, int(w))
+    def TS_DELTA(self, a: np.ndarray, p: int) -> np.ndarray:
+        return a - alpha.REF(a, int(p))
 
-  TSRANK = TS_RANK  # gtja191
+    DELTA = TS_DELTA  # wq101
 
-  # ── TS: Delay / Delta ──────────────────────────────────────────────
-  #   BRAIN: ts_delay, ts_delta
-  #   wq101: DELAY, DELTA
-  #   AmiBroker: REF
+    # ── TS: Decay Linear / Weighted Mean ───────────────────────────────
+    #   BRAIN: ts_decay_linear
+    #   wq101: DECAY_LINEAR
+    #   GTJA:  DECAYLINEAR, WMA
 
-  def TS_DELAY(self, a: np.ndarray, p: int) -> np.ndarray:
-    return alpha.REF(a, int(p))
+    def TS_DECAY_LINEAR(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.LWMA(a, int(w))
 
-  DELAY = TS_DELAY  # wq101
+    DECAY_LINEAR = TS_DECAY_LINEAR  # wq101
+    DECAYLINEAR = TS_DECAY_LINEAR  # gtja191
+    WMA = TS_DECAY_LINEAR  # gtja191
 
-  def TS_DELTA(self, a: np.ndarray, p: int) -> np.ndarray:
-    return a - alpha.REF(a, int(p))
+    # ── TS: Product ────────────────────────────────────────────────────
+    #   BRAIN: ts_product    wq101: PRODUCT    GTJA: PROD
 
-  DELTA = TS_DELTA  # wq101
+    def TS_PRODUCT(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.PRODUCT(a, int(w))
 
-  # ── TS: Decay Linear / Weighted Mean ───────────────────────────────
-  #   BRAIN: ts_decay_linear
-  #   wq101: DECAY_LINEAR
-  #   GTJA:  DECAYLINEAR, WMA
+    PRODUCT = TS_PRODUCT  # wq101
+    PROD = TS_PRODUCT  # gtja191
 
-  def TS_DECAY_LINEAR(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.LWMA(a, int(w))
+    # ── TS: Regression ─────────────────────────────────────────────────
+    #   GTJA: REGBETA, REGRESI
 
-  DECAY_LINEAR = TS_DECAY_LINEAR  # wq101
-  DECAYLINEAR = TS_DECAY_LINEAR  # gtja191
-  WMA = TS_DECAY_LINEAR  # gtja191
+    def TS_REGBETA(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
+        return alpha.REGBETA(a, b, int(w))
 
-  # ── TS: Product ────────────────────────────────────────────────────
-  #   BRAIN: ts_product    wq101: PRODUCT    GTJA: PROD
+    REGBETA = TS_REGBETA  # gtja191
 
-  def TS_PRODUCT(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.PRODUCT(a, int(w))
+    def TS_REGRESI(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
+        return alpha.REGRESI(a, b, int(w))
 
-  PRODUCT = TS_PRODUCT  # wq101
-  PROD = TS_PRODUCT  # gtja191
+    REGRESI = TS_REGRESI  # gtja191
 
-  # ── TS: Regression ─────────────────────────────────────────────────
-  #   GTJA: REGBETA, REGRESI
+    # ── TS: Counting / Conditional ─────────────────────────────────────
+    #   GTJA: COUNT, SUMIF
 
-  def TS_REGBETA(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
-    return alpha.REGBETA(a, b, int(w))
+    def TS_COUNT(self, cond: np.ndarray, w: int) -> np.ndarray:
+        return alpha.COUNT(np.asarray(cond, dtype=bool), int(w))
 
-  REGBETA = TS_REGBETA  # gtja191
+    COUNT = TS_COUNT  # gtja191
 
-  def TS_REGRESI(self, a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
-    return alpha.REGRESI(a, b, int(w))
+    def TS_SUMIF(self, a: np.ndarray, w: int, cond) -> np.ndarray:
+        return alpha.SUMIF(np.asarray(a, dtype=np.float64), np.asarray(cond, dtype=bool), int(w))
 
-  REGRESI = TS_REGRESI  # gtja191
+    SUMIF = TS_SUMIF  # gtja191
 
-  # ── TS: Counting / Conditional ─────────────────────────────────────
-  #   GTJA: COUNT, SUMIF
+    # ── TS: Conditional Scan (SELF recursion) ───────────────────────────
+    #   GTJA: SELF-referencing patterns
 
-  def TS_COUNT(self, cond: np.ndarray, w: int) -> np.ndarray:
-    return alpha.COUNT(np.asarray(cond, dtype=bool), int(w))
+    def SCAN_MUL(self, operand: np.ndarray, cond: np.ndarray) -> np.ndarray:
+        return alpha.SCAN_MUL(np.asarray(operand, dtype=np.float64), np.asarray(cond, dtype=bool))
 
-  COUNT = TS_COUNT  # gtja191
+    def SCAN_ADD(self, operand: np.ndarray, cond: np.ndarray) -> np.ndarray:
+        return alpha.SCAN_ADD(np.asarray(operand, dtype=np.float64), np.asarray(cond, dtype=bool))
 
-  def TS_SUMIF(self, a: np.ndarray, w: int, cond) -> np.ndarray:
-    return alpha.SUMIF(
-      np.asarray(a, dtype=np.float64), np.asarray(cond, dtype=bool), int(w)
-    )
+    # ── TS: Z-Score ────────────────────────────────────────────────────
+    #   BRAIN: ts_zscore
 
-  SUMIF = TS_SUMIF  # gtja191
+    def TS_ZSCORE(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.ZSCORE(a, int(w))
 
-  # ── TS: Conditional Scan (SELF recursion) ───────────────────────────
-  #   GTJA: SELF-referencing patterns
+    # ── TS: Higher Moments ─────────────────────────────────────────────
+    #   BRAIN: ts_skewness, ts_kurtosis
 
-  def SCAN_MUL(self, operand: np.ndarray, cond: np.ndarray) -> np.ndarray:
-    return alpha.SCAN_MUL(
-      np.asarray(operand, dtype=np.float64), np.asarray(cond, dtype=bool)
-    )
+    def TS_SKEWNESS(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.SKEWNESS(a, int(w))
 
-  def SCAN_ADD(self, operand: np.ndarray, cond: np.ndarray) -> np.ndarray:
-    return alpha.SCAN_ADD(
-      np.asarray(operand, dtype=np.float64), np.asarray(cond, dtype=bool)
-    )
+    def TS_KURTOSIS(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.KURTOSIS(a, int(w))
 
-  # ── TS: Z-Score ────────────────────────────────────────────────────
-  #   BRAIN: ts_zscore
+    # ── TS: Data Utilities ─────────────────────────────────────────────
+    #   BRAIN: ts_backfill, ts_count_nans
 
-  def TS_ZSCORE(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.ZSCORE(a, int(w))
+    def TS_BACKFILL(self, a: np.ndarray) -> np.ndarray:
+        return alpha.BACKFILL(a)
 
-  # ── TS: Higher Moments ─────────────────────────────────────────────
-  #   BRAIN: ts_skewness, ts_kurtosis
+    def TS_COUNT_NANS(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.COUNT_NANS(a, int(w))
 
-  def TS_SKEWNESS(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.SKEWNESS(a, int(w))
+    # ── TS: Entropy ────────────────────────────────────────────────────
+    #   BRAIN: ts_entropy
 
-  def TS_KURTOSIS(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.KURTOSIS(a, int(w))
+    def TS_ENTROPY(self, a: np.ndarray, w: int, bins: int = 10) -> np.ndarray:
+        return alpha.ENTROPY(a, int(w), int(bins))
 
-  # ── TS: Data Utilities ─────────────────────────────────────────────
-  #   BRAIN: ts_backfill, ts_count_nans
+    # ── TS: Min-Max Diff (Range) ─────────────────────────────────────
+    #   BRAIN: ts_min_max_diff
 
-  def TS_BACKFILL(self, a: np.ndarray) -> np.ndarray:
-    return alpha.BACKFILL(a)
+    def TS_MIN_MAX_DIFF(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.MIN_MAX_DIFF(a, int(w))
 
-  def TS_COUNT_NANS(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.COUNT_NANS(a, int(w))
+    # ── TS: Weighted Delay ───────────────────────────────────────────
+    #   BRAIN: ts_weighted_delay
 
-  # ── TS: Entropy ────────────────────────────────────────────────────
-  #   BRAIN: ts_entropy
+    def TS_WEIGHTED_DELAY(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.WEIGHTED_DELAY(a, int(w))
 
-  def TS_ENTROPY(self, a: np.ndarray, w: int, bins: int = 10) -> np.ndarray:
-    return alpha.ENTROPY(a, int(w), int(bins))
+    # ── TS: Central Moment ───────────────────────────────────────────
+    #   BRAIN: ts_moment
 
-  # ── TS: Min-Max Diff (Range) ─────────────────────────────────────
-  #   BRAIN: ts_min_max_diff
+    def TS_MOMENT(self, a: np.ndarray, w: int, k: int = 2) -> np.ndarray:
+        return alpha.MOMENT(a, int(w), int(k))
 
-  def TS_MIN_MAX_DIFF(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.MIN_MAX_DIFF(a, int(w))
+    # ── TS: Cross Detection ────────────────────────────────────────────
+    #   AmiBroker/GTJA: CROSS, LONGCROSS
 
-  # ── TS: Weighted Delay ───────────────────────────────────────────
-  #   BRAIN: ts_weighted_delay
+    def CROSS(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
+        return alpha.CROSS(a, b)
 
-  def TS_WEIGHTED_DELAY(self, a: np.ndarray, w: int) -> np.ndarray:
-    return alpha.WEIGHTED_DELAY(a, int(w))
+    def LONGCROSS(self, a: np.ndarray, b: np.ndarray, n: int) -> np.ndarray:
+        return alpha.LONGCROSS(a, b, int(n))
 
-  # ── TS: Central Moment ───────────────────────────────────────────
-  #   BRAIN: ts_moment
+    # ── Cutting Operators (切割算子, 开源证券) ────────────────────────────
+    #   Sort by y within rolling window, aggregate x for top/bottom n rows.
 
-  def TS_MOMENT(self, a: np.ndarray, w: int, k: int = 2) -> np.ndarray:
-    return alpha.MOMENT(a, int(w), int(k))
+    def ROLLING_SELMEAN_BTM(self, x: np.ndarray, y: np.ndarray, d: int, n: int) -> np.ndarray:
+        return alpha.SELMEAN_BTM(x, y, int(d), int(n))
 
-  # ── TS: Cross Detection ────────────────────────────────────────────
-  #   AmiBroker/GTJA: CROSS, LONGCROSS
+    def ROLLING_SELMEAN_TOP(self, x: np.ndarray, y: np.ndarray, d: int, n: int) -> np.ndarray:
+        return alpha.SELMEAN_TOP(x, y, int(d), int(n))
 
-  def CROSS(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
-    return alpha.CROSS(a, b)
+    def ROLLING_SELMEAN_DIFF(self, x: np.ndarray, y: np.ndarray, d: int, n: int) -> np.ndarray:
+        return alpha.SELMEAN_DIFF(x, y, int(d), int(n))
 
-  def LONGCROSS(self, a: np.ndarray, b: np.ndarray, n: int) -> np.ndarray:
-    return alpha.LONGCROSS(a, b, int(n))
+    # ====================================================================
+    #  Cross-Sectional Operators (no prefix)
+    #
+    #  Operate across all groups at each time step.
+    # ====================================================================
 
-  # ====================================================================
-  #  Cross-Sectional Operators (no prefix)
-  #
-  #  Operate across all groups at each time step.
-  # ====================================================================
+    # ── Rank ────────────────────────────────────────────────────────────
+    #   BRAIN: rank          wq101/GTJA: RANK
 
-  # ── Rank ────────────────────────────────────────────────────────────
-  #   BRAIN: rank          wq101/GTJA: RANK
+    def RANK(self, a: np.ndarray) -> np.ndarray:
+        return alpha.CC_RANK(a)
 
-  def RANK(self, a: np.ndarray) -> np.ndarray:
-    return alpha.CC_RANK(a)
+    # ── Z-Score ─────────────────────────────────────────────────────────
+    #   BRAIN: zscore
 
-  # ── Z-Score ─────────────────────────────────────────────────────────
-  #   BRAIN: zscore
+    def ZSCORE(self, a: np.ndarray) -> np.ndarray:
+        return alpha.CC_ZSCORE(a)
 
-  def ZSCORE(self, a: np.ndarray) -> np.ndarray:
-    return alpha.CC_ZSCORE(a)
+    # ── Scale ───────────────────────────────────────────────────────────
+    #   BRAIN: scale         wq101: SCALE
 
-  # ── Scale ───────────────────────────────────────────────────────────
-  #   BRAIN: scale         wq101: SCALE
+    def SCALE(self, a: np.ndarray, k: int = 1) -> np.ndarray:
+        return a * k / np.abs(a).sum()
 
-  def SCALE(self, a: np.ndarray, k: int = 1) -> np.ndarray:
-    return a * k / np.abs(a).sum()
+    # ── IndNeutralize ───────────────────────────────────────────────────
+    #   wq101: INDNEUTRALIZE(value, IndClass.xxx)
 
-  # ── IndNeutralize ───────────────────────────────────────────────────
-  #   wq101: INDNEUTRALIZE(value, IndClass.xxx)
+    def INDNEUTRALIZE(self, value: np.ndarray, category: np.ndarray) -> np.ndarray:
+        return alpha.NEUTRALIZE(category, value)
 
-  def INDNEUTRALIZE(self, value: np.ndarray, category: np.ndarray) -> np.ndarray:
-    return alpha.NEUTRALIZE(category, value)
+    # ====================================================================
+    #  Grouped Cross-Sectional Operators (GROUP_ prefix)
+    #
+    #  Operate across items within each category group at each time step.
+    # ====================================================================
 
-  # ====================================================================
-  #  Grouped Cross-Sectional Operators (GROUP_ prefix)
-  #
-  #  Operate across items within each category group at each time step.
-  # ====================================================================
+    # ── Group Rank ────────────────────────────────────────────────────
+    #   BRAIN: group_rank
 
-  # ── Group Rank ────────────────────────────────────────────────────
-  #   BRAIN: group_rank
+    def GROUP_RANK(self, a: np.ndarray, group: np.ndarray) -> np.ndarray:
+        return alpha.GROUP_RANK(group, a)
 
-  def GROUP_RANK(self, a: np.ndarray, group: np.ndarray) -> np.ndarray:
-    return alpha.GROUP_RANK(group, a)
+    # ── Group Z-Score ─────────────────────────────────────────────────
+    #   BRAIN: group_zscore
 
-  # ── Group Z-Score ─────────────────────────────────────────────────
-  #   BRAIN: group_zscore
+    def GROUP_ZSCORE(self, a: np.ndarray, group: np.ndarray) -> np.ndarray:
+        return alpha.GROUP_ZSCORE(group, a)
 
-  def GROUP_ZSCORE(self, a: np.ndarray, group: np.ndarray) -> np.ndarray:
-    return alpha.GROUP_ZSCORE(group, a)
+    # ====================================================================
+    #  Element-wise Operators
+    # ====================================================================
 
-  # ====================================================================
-  #  Element-wise Operators
-  # ====================================================================
+    def MAX(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
+        return np.maximum(a, b)
 
-  def MAX(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
-    return np.maximum(a, b)
+    def MIN(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
+        return np.minimum(a, b)
 
-  def MIN(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
-    return np.minimum(a, b)
+    def ABS(self, a: np.ndarray) -> np.ndarray:
+        return np.abs(a)
 
-  def ABS(self, a: np.ndarray) -> np.ndarray:
-    return np.abs(a)
+    def LOG(self, a: np.ndarray) -> np.ndarray:
+        return np.log(a)
 
-  def LOG(self, a: np.ndarray) -> np.ndarray:
-    return np.log(a)
+    def SIGN(self, a: np.ndarray) -> np.ndarray:
+        return np.sign(a)
 
-  def SIGN(self, a: np.ndarray) -> np.ndarray:
-    return np.sign(a)
+    def SIGNEDPOWER(self, a: np.ndarray, p) -> np.ndarray:
+        return np.sign(a) * np.power(np.abs(a), p)
 
-  def SIGNEDPOWER(self, a: np.ndarray, p) -> np.ndarray:
-    return np.sign(a) * np.power(np.abs(a), p)
+    def FILTER(self, a: np.ndarray, cond: np.ndarray) -> np.ndarray:
+        return np.where(cond, a, np.nan)
 
-  def FILTER(self, a: np.ndarray, cond: np.ndarray) -> np.ndarray:
-    return np.where(cond, a, np.nan)
+    # ── Sanitization ───────────────────────────────────────────────────
+    #   BRAIN: pasteurize / purify, truncate / tail
 
-  # ── Sanitization ───────────────────────────────────────────────────
-  #   BRAIN: pasteurize / purify, truncate / tail
+    def PASTEURIZE(self, a: np.ndarray) -> np.ndarray:
+        return np.where(np.isfinite(a), a, 0.0)
 
-  def PASTEURIZE(self, a: np.ndarray) -> np.ndarray:
-    return np.where(np.isfinite(a), a, 0.0)
+    PURIFY = PASTEURIZE  # BRAIN alias
 
-  PURIFY = PASTEURIZE  # BRAIN alias
+    def TAIL(self, a: np.ndarray, limit: float = 3.0) -> np.ndarray:
+        return np.clip(a, -limit, limit)
 
-  def TAIL(self, a: np.ndarray, limit: float = 3.0) -> np.ndarray:
-    return np.clip(a, -limit, limit)
-
-  TRUNCATE = TAIL  # BRAIN alias
+    TRUNCATE = TAIL  # BRAIN alias
