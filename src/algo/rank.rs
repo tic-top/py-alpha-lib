@@ -24,13 +24,15 @@ impl<NumT: Float> Ord for OrderedFloat<NumT> {
     match self.value.partial_cmp(&other.value) {
       Some(ord) => ord,
       None => {
-        if self.value.is_finite() {
-          return Ordering::Greater;
+        // At least one value is NaN. Establish total order: NaN < everything.
+        let self_nan = self.value.is_nan();
+        let other_nan = other.value.is_nan();
+        match (self_nan, other_nan) {
+          (true, true) => Ordering::Equal,
+          (true, false) => Ordering::Less,
+          (false, true) => Ordering::Greater,
+          (false, false) => Ordering::Equal, // unreachable in practice
         }
-        if self.value.is_infinite() {
-          return Ordering::Less;
-        }
-        return Ordering::Less;
       }
     }
   }
@@ -186,56 +188,51 @@ pub fn ta_cc_rank<NumT: Float + Send + Sync + Debug>(
 
   let r = UnsafePtr::new(r.as_mut_ptr(), r.len());
   (0..group_size).into_par_iter().for_each(|j| {
-    let mut rank_window: Vec<(OrderedFloat<NumT>, usize)> = Vec::new();
-    for i in 0..groups {
-      let idx = i * group_size + j;
-      rank_window.push((input[idx].into(), idx));
-    }
-    rank_window.sort_by(|a, b| a.0.cmp(&b.0));
+    // Separate NaN and valid values before sorting.
+    // NaN never participates in sort — avoids Rust sort panics on broken total order.
+    let mut valid_entries: Vec<(OrderedFloat<NumT>, usize)> = Vec::new();
     let r = r.get();
 
-    // OrderedFloat sorts NaN to the beginning (NaN < everything).
-    // Find where valid (non-NaN) values start.
-    let nan_count = rank_window
-      .iter()
-      .take_while(|v| v.0.value.is_nan())
-      .count();
-    let valid_count = rank_window.len() - nan_count;
-
-    // Assign NaN to NaN positions
-    for i in 0..nan_count {
-      r[rank_window[i].1] = NumT::nan();
+    for i in 0..groups {
+      let idx = i * group_size + j;
+      if input[idx].is_nan() {
+        r[idx] = NumT::nan();
+      } else {
+        valid_entries.push((input[idx].into(), idx));
+      }
     }
 
+    let valid_count = valid_entries.len();
     if valid_count == 0 {
       return;
     }
 
+    valid_entries.sort_by(|a, b| a.0.cmp(&b.0));
+
     let total = NumT::from(valid_count).unwrap();
 
-    // Rank only valid values (starting from nan_count)
-    let mut prev_rank_value = rank_window[nan_count].0.value;
-    let mut s = nan_count;
+    // Rank valid values only — chunk by same value, assign averaged rank percentage
+    let mut prev_rank_value = valid_entries[0].0.value;
+    let mut s = 0;
 
-    // chunk by same value
-    for e in nan_count..rank_window.len() {
-      if prev_rank_value == rank_window[e].0.value {
+    for e in 0..valid_entries.len() {
+      if prev_rank_value == valid_entries[e].0.value {
         continue;
       }
       let rank_avg =
-        NumT::from(e - nan_count + s - nan_count + 1).unwrap() / NumT::from(2usize).unwrap();
+        NumT::from(e + s + 1).unwrap() / NumT::from(2usize).unwrap();
       for i in s..e {
-        r[rank_window[i].1] = rank_avg / total;
+        r[valid_entries[i].1] = rank_avg / total;
       }
       s = e;
-      prev_rank_value = rank_window[e].0.value;
+      prev_rank_value = valid_entries[e].0.value;
     }
 
     // the last chunk of valid values
     let rank_avg =
-      NumT::from(valid_count + s - nan_count + 1).unwrap() / NumT::from(2usize).unwrap();
-    for i in s..rank_window.len() {
-      r[rank_window[i].1] = rank_avg / total;
+      NumT::from(valid_count + s + 1).unwrap() / NumT::from(2usize).unwrap();
+    for i in s..valid_entries.len() {
+      r[valid_entries[i].1] = rank_avg / total;
     }
   });
 
@@ -279,93 +276,53 @@ pub fn ta_bins<NumT: Float + Send + Sync + Debug>(
 
   let r_ptr = UnsafePtr::new(r.as_mut_ptr(), r.len());
   (0..group_size).into_par_iter().for_each(|j| {
-    let mut rank_window: Vec<(OrderedFloat<NumT>, usize)> = Vec::new();
-    for i in 0..groups {
-      let idx = i * group_size + j;
-      // Handle NaN: usually we skip NaNs or put them in a separate bin?
-      // ta_rank includes NaNs in sorting?
-      // OrderedFloat handles NaNs (NaN > infinite > finite).
-      // So NaNs will be at the end.
-      // If we include NaNs in binning, they will be in the last bin.
-      // Usually we want NaNs to remain NaN.
-      // Let's check if we should skip NaNs.
-      // ta_rank implementation sorts everything. OrderedFloat treats NaN as > all.
-      // So NaNs get the highest rank.
-      // If we want NaNs to be NaN in output, we should filter them.
-      // But ta_rank output: `r[rank_window[i].1] = rank_avg / total;`.
-      // So NaNs get a rank.
-      // If user wants to skip NaNs, they should use FLAG_SKIP_NAN?
-      // But ta_rank doesn't check ctx.is_skip_nan().
-      // ta_ts_rank uses skip_nan_window if ctx.is_skip_nan() (implied? No, ta_ts_rank doesn't seem to check flag either in the snippet I saw, wait. ta_linear_reg checked.)
-      // ta_ts_rank code:
-      // if ctx.is_strictly_cycle() ...
-      // It doesn't seem to handle SKIP_NAN explicitly in the snippet I saw.
-      // But `OrderedFloat` puts NaN at the end.
-      // Let's stick to ta_rank behavior: process everything.
-      // However, for "bins", usually NaNs should be NaN.
-      // If I sort and bin, NaNs will be in the top bin.
-      // Let's check `is_normal` usage in other files.
-      // In `returns.rs`, `ta_fret` checks `is_normal`.
-      // In `rank.rs`, `ta_rank` does NOT check `is_normal`. It sorts everything.
-      // So `ta_bins` should probably follow `ta_rank`.
-
-      rank_window.push((input[idx].into(), idx));
-    }
-    rank_window.sort_by(|a, b| a.0.cmp(&b.0));
+    // Separate NaN and valid values before sorting.
+    let mut valid_entries: Vec<(OrderedFloat<NumT>, usize)> = Vec::new();
     let r = r_ptr.get();
 
-    // We need to count valid values if we want to ignore NaNs?
-    // But ta_rank counts everything.
-    // I will stick to exact ta_rank logic but map to bins.
+    for i in 0..groups {
+      let idx = i * group_size + j;
+      if input[idx].is_nan() {
+        r[idx] = NumT::nan();
+      } else {
+        valid_entries.push((input[idx].into(), idx));
+      }
+    }
 
-    let mut prev_rank_value = rank_window[0].0.value;
-    let mut s = 0;
-    let total = NumT::from(rank_window.len()).unwrap();
+    let valid_count = valid_entries.len();
+    if valid_count == 0 {
+      return;
+    }
+
+    valid_entries.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let total = NumT::from(valid_count).unwrap();
     let bins_t = NumT::from(bins).unwrap();
 
-    // chunk by same value
-    for e in 0..rank_window.len() {
-      if prev_rank_value == rank_window[e].0.value {
+    // Chunk by same value, assign bin index
+    let mut prev_rank_value = valid_entries[0].0.value;
+    let mut s = 0;
+
+    for e in 0..valid_entries.len() {
+      if prev_rank_value == valid_entries[e].0.value {
         continue;
       }
-      // Process chunk s..e
       let rank_avg = NumT::from(e + s + 1).unwrap() / NumT::from(2usize).unwrap();
-      // rank_avg is 1-based average rank.
-      // formula: floor((rank_avg - 1) * bins / total)
-      // but ensure result is in [0, bins-1]
-
-      let val = rank_window[s].0.value;
-      let bin = if val.is_nan() {
-        NumT::nan() // If value is NaN, return NaN
-      // OrderedFloat treats NaN as largest.
-      // If input has NaN, ta_rank assigns high rank.
-      // If we want bins, maybe NaN should be NaN.
-      // Let's assume we preserve NaN if value is not normal.
-      } else {
-        let b = ((rank_avg - NumT::one()) * bins_t / total).floor();
-        // clamp to bins-1 (although logic says it should be < bins)
-        if b >= bins_t { bins_t - NumT::one() } else { b }
-      };
-
+      let b = ((rank_avg - NumT::one()) * bins_t / total).floor();
+      let bin = if b >= bins_t { bins_t - NumT::one() } else { b };
       for i in s..e {
-        r[rank_window[i].1] = bin;
+        r[valid_entries[i].1] = bin;
       }
       s = e;
-      prev_rank_value = rank_window[e].0.value;
+      prev_rank_value = valid_entries[e].0.value;
     }
 
     // the last chunk
-    let rank_avg = NumT::from(rank_window.len() + s + 1).unwrap() / NumT::from(2usize).unwrap();
-    let val = rank_window[s].0.value;
-    let bin = if val.is_nan() {
-      NumT::nan()
-    } else {
-      let b = ((rank_avg - NumT::one()) * bins_t / total).floor();
-      if b >= bins_t { bins_t - NumT::one() } else { b }
-    };
-
-    for i in s..rank_window.len() {
-      r[rank_window[i].1] = bin;
+    let rank_avg = NumT::from(valid_count + s + 1).unwrap() / NumT::from(2usize).unwrap();
+    let b = ((rank_avg - NumT::one()) * bins_t / total).floor();
+    let bin = if b >= bins_t { bins_t - NumT::one() } else { b };
+    for i in s..valid_entries.len() {
+      r[valid_entries[i].1] = bin;
     }
   });
 
