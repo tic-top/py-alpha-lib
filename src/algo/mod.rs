@@ -1,6 +1,7 @@
 // Copyright 2026 MSD-RS Project LiJia
 // SPDX-License-Identifier: BSD-2-Clause
 
+mod avedev;
 mod backfill;
 mod context;
 mod cross;
@@ -26,6 +27,7 @@ mod stddev;
 mod sum;
 mod zscore;
 
+pub use avedev::*;
 pub use backfill::*;
 pub use context::Context;
 pub use cross::*;

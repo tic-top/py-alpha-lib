@@ -18,6 +18,25 @@ def _to_bool(a):
     return a
   return a.astype(bool)
 
+def AVEDEV(
+  input: np.ndarray | list[np.ndarray], periods: int
+) -> np.ndarray | list[np.ndarray]:
+  """
+  Rolling mean absolute deviation over a window of `periods`.
+  
+  AVEDEV(x, d) = (1/d) * sum(|x[i] - mean(x, d)|) for i in window.
+  """
+  if isinstance(input, list):
+    input = [_to_f64(x) for x in input]
+    r = [np.empty_like(x) for x in input]
+    _algo.avedev(r, input, periods)
+    return r
+  else:
+    input = _to_f64(input)
+    r = np.empty_like(input)
+    _algo.avedev(r, input, periods)
+    return r
+
 def BACKFILL(
   input: np.ndarray | list[np.ndarray]
 ) -> np.ndarray | list[np.ndarray]:

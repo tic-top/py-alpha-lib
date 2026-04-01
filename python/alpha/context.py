@@ -268,6 +268,13 @@ class ExecContext:
 
     MEDIAN = TS_MEDIAN
 
+    # ── TS: Mean Absolute Deviation ───────────────────────────────────
+
+    def AVEDEV(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.AVEDEV(a, int(w))
+
+    MEDIAN = TS_MEDIAN
+
     # ── TS: Correlation / Covariance (two-input) ───────────────────────
     #   BRAIN: ts_correlation, ts_covariance
     #   wq101: CORRELATION, COVARIANCE

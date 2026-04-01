@@ -2,6 +2,7 @@ List of available functions with python type hints:
 
 the `np.ndarray` is `ndarray` type in `numpy` package
 
+- AVEDEV(input: np.ndarray[float], periods: int): Rolling mean absolute deviation over a window of `periods`.  AVEDEV(x, d) = (1/d) * sum(|x[i] - mean(x, d)|) for i in window.
 - BACKFILL(input: np.ndarray[float]): Forward-fill NaN values with the last valid observation  Iterates forward through each group; if x[i] is NaN, copies the last valid value. Leading NaNs (before any valid value) remain NaN.
 - BARSLAST(input: np.ndarray[bool]): Calculate number of bars since last condition true
 - BARSSINCE(input: np.ndarray[bool]): Calculate number of bars since first condition true
