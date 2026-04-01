@@ -261,6 +261,13 @@ class ExecContext:
 
     VAR = TS_VARIANCE  # gtja191
 
+    # ── TS: Median ─────────────────────────────────────────────────────
+
+    def TS_MEDIAN(self, a: np.ndarray, w: int) -> np.ndarray:
+        return alpha.MEDIAN(a, int(w))
+
+    MEDIAN = TS_MEDIAN
+
     # ── TS: Correlation / Covariance (two-input) ───────────────────────
     #   BRAIN: ts_correlation, ts_covariance
     #   wq101: CORRELATION, COVARIANCE
@@ -361,6 +368,7 @@ class ExecContext:
         return alpha.REGRESI(a, b, int(w))
 
     REGRESI = TS_REGRESI  # gtja191
+    OLS = TS_REGRESI  # 开源证券: ols(x,y) = regression residual
 
     # ── TS: Counting / Conditional ─────────────────────────────────────
     #   GTJA: COUNT, SUMIF

@@ -184,6 +184,7 @@ Naming Rules:
 | LONGCROSS | For 2 arrays A and B, return true if previous N periods A < B, Current A >= B |
 | LWMA | Linear Weighted Moving Average |
 | MA | Simple Moving Average, also known as arithmetic moving average |
+| MEDIAN | Calculate median over a moving window |
 | MIN_MAX_DIFF | Calculate rolling min-max difference (range) over a moving window |
 | MOMENT | Calculate rolling k-th central moment over a moving window |
 | NEUTRALIZE | Neutralize the effect of a categorical variable on a numeric variable |
