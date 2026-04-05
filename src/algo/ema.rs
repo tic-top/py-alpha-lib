@@ -234,19 +234,43 @@ pub fn ema_impl<NumT: Float + Send + Sync>(
   r.par_chunks_mut(ctx.chunk_size(r.len()))
     .zip(input.par_chunks(ctx.chunk_size(input.len())))
     .for_each(|(r, i)| {
-      let mut prev = i[0];
       let total = r.len();
+      let start = ctx.start(total);
+      let skip_nan = ctx.is_skip_nan();
+      let strictly_cycle = ctx.is_strictly_cycle();
+
+      // Find the seed value: first normal value at or after `start`.
+      // If skip_nan, leading NaN values output NaN without poisoning prev.
+      let mut prev = i[0]; // fallback for non-skip_nan mode
+      let mut seeded = !skip_nan; // non-skip_nan always seeds from i[0]
+
+      if skip_nan {
+        // Scan for first valid value to seed prev
+        for val in i.iter().skip(start) {
+          if is_normal(val) {
+            prev = *val;
+            seeded = false; // will be set true on first encounter in main loop
+            break;
+          }
+        }
+      }
+
       for (n, (r, c)) in r
         .iter_mut()
         .zip(i.iter())
         .enumerate()
-        .skip(ctx.start(total))
+        .skip(start)
       {
-        if ctx.is_skip_nan() && !is_normal(c) {
+        if skip_nan && !is_normal(c) {
           *r = NumT::nan();
           continue;
         }
-        if ctx.is_strictly_cycle() && n < periods - 1 {
+        if !seeded {
+          // First valid value — use as seed
+          *r = *c;
+          prev = *r;
+          seeded = true;
+        } else if strictly_cycle && n < periods - 1 {
           *r = NumT::nan();
           prev = *c;
         } else {
@@ -283,6 +307,44 @@ mod tests {
     assert_eq!(r[0], 1.0);
     assert_eq!(r[1], 1.5);
     assert_eq!(r[2], 2.25);
+  }
+
+  #[test]
+  fn test_ta_ema_skip_nan_leading() {
+    // Leading NaN followed by valid data — should seed from first valid value
+    let input = vec![f64::NAN, f64::NAN, f64::NAN, 1.0, 2.0, 3.0, 4.0, 5.0];
+    let periods = 3;
+    let mut r = vec![0.0; input.len()];
+    let ctx = Context::new(0, 0, FLAG_SKIP_NAN);
+    let _ = ta_ema(&ctx, &mut r, &input, periods);
+    // alpha = 2/4 = 0.5
+    // 0-2: NaN (leading)
+    // 3: seed = 1.0
+    // 4: 0.5*2 + 0.5*1 = 1.5
+    // 5: 0.5*3 + 0.5*1.5 = 2.25
+    // 6: 0.5*4 + 0.5*2.25 = 3.125
+    // 7: 0.5*5 + 0.5*3.125 = 4.0625
+    assert_vec_eq_nan(
+      &r,
+      &vec![f64::NAN, f64::NAN, f64::NAN, 1.0, 1.5, 2.25, 3.125, 4.0625],
+    );
+  }
+
+  #[test]
+  fn test_ta_ema_skip_nan_middle() {
+    // Middle NaN should be skipped without poisoning prev
+    let input = vec![1.0, 2.0, f64::NAN, 3.0, 4.0];
+    let periods = 3;
+    let mut r = vec![0.0; input.len()];
+    let ctx = Context::new(0, 0, FLAG_SKIP_NAN);
+    let _ = ta_ema(&ctx, &mut r, &input, periods);
+    // alpha = 0.5
+    // 0: 1.0 (seed)
+    // 1: 0.5*2 + 0.5*1 = 1.5
+    // 2: NaN (skip, prev stays 1.5)
+    // 3: 0.5*3 + 0.5*1.5 = 2.25
+    // 4: 0.5*4 + 0.5*2.25 = 3.125
+    assert_vec_eq_nan(&r, &vec![1.0, 1.5, f64::NAN, 2.25, 3.125]);
   }
 
   #[test]
